@@ -1,0 +1,42 @@
+module.exports = {
+  // Account Status
+  ACCOUNT_STATUS: {
+    ACTIVE: 'ACTIVE',
+    SUSPENDED: 'SUSPENDED',
+    BANNED: 'BANNED',
+    PENDING_VERIFICATION: 'PENDING_VERIFICATION',
+  },
+
+  // Product Status
+  PRODUCT_STATUS: {
+    AVAILABLE: 'AVAILABLE',
+    RESERVED: 'RESERVED',
+    EXCHANGED: 'EXCHANGED',
+    SOLD: 'SOLD',
+    REMOVED: 'REMOVED',
+  },
+
+  // Request Status
+  REQUEST_STATUS: {
+    PENDING: 'PENDING',
+    ACCEPTED: 'ACCEPTED',
+    REJECTED: 'REJECTED',
+    COMPLETED: 'COMPLETED',
+    CANCELLED: 'CANCELLED',
+  },
+
+  // Report Status
+  REPORT_STATUS: {
+    PENDING: 'PENDING',
+    REVIEWING: 'REVIEWING',
+    RESOLVED: 'RESOLVED',
+    DISMISSED: 'DISMISSED',
+  },
+
+  // Verification Status
+  VERIFICATION_STATUS: {
+    PENDING: 'PENDING',
+    APPROVED: 'APPROVED',
+    REJECTED: 'REJECTED',
+  },
+};

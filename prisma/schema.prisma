@@ -1,0 +1,481 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============= ENUMS =============
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+  PENDING_VERIFICATION
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ProductCondition {
+  NEW
+  LIKE_NEW
+  GOOD
+  FAIR
+  POOR
+}
+
+enum ExchangePreference {
+  EXCHANGE_ONLY
+  PURCHASE_ONLY
+  BOTH
+}
+
+enum AvailabilityStatus {
+  AVAILABLE
+  RESERVED
+  EXCHANGED
+  SOLD
+  REMOVED
+}
+
+enum RequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COMPLETED
+  CANCELLED
+}
+
+enum ReportType {
+  FRAUD
+  SPAM
+  FAKE_PRODUCT
+  INAPPROPRIATE_CONTENT
+  INCORRECT_REQUEST
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+enum NotificationType {
+  EXCHANGE_REQUEST
+  PURCHASE_REQUEST
+  REQUEST_RESPONSE
+  RATING
+  REPORT_UPDATE
+  SYSTEM
+  FEATURED_PRODUCT
+}
+
+enum AdPosition {
+  DASHBOARD
+  SIDEBAR
+  BANNER
+}
+
+enum RatedEntityType {
+  EXCHANGE
+  PURCHASE
+}
+
+enum TransactionType {
+  EXCHANGE
+  PURCHASE
+}
+
+enum RelatedEntityType {
+  PRODUCT
+  EXCHANGE_REQUEST
+  PURCHASE_REQUEST
+  REPORT
+}
+
+// ============= MODELS =============
+
+model City {
+  city_id    Int      @id @default(autoincrement())
+  city_name  String   @db.VarChar(50)
+  region     String?  @db.VarChar(50)
+  country    String   @default("Palestine") @db.VarChar(50)
+  created_at DateTime @default(now())
+
+  users    User[]    @relation("UserCity")
+  products Product[] @relation("ProductCity")
+
+  @@unique([city_name, region])
+  @@map("cities")
+}
+
+model User {
+  user_id                Int               @id @default(autoincrement())
+  full_name              String            @db.VarChar(100)
+  phone_number           String            @unique @db.VarChar(20)
+  address                String            @db.VarChar(255)
+  email                  String            @unique @db.VarChar(100)
+  password_hash          String            @db.VarChar(255)
+  account_status         AccountStatus     @default(PENDING_VERIFICATION)
+  total_transactions     Int               @default(0)
+  registration_date      DateTime          @default(now())
+  last_login             DateTime?
+  created_at             DateTime          @default(now())
+  updated_at             DateTime          @updatedAt
+  is_verified            Boolean           @default(false)
+  is_active              Boolean           @default(true)
+  deleted_at             DateTime?
+  refresh_token          String?           @db.VarChar(500)
+  refresh_token_expires  DateTime?
+  city_id                Int
+
+  // Relations
+  city                   City              @relation("UserCity", fields: [city_id], references: [city_id])
+  products               Product[]         @relation("ProductOwner")
+  exchange_initiated     ExchangeRequest[] @relation("ExchangeInitiator")
+  exchange_received      ExchangeRequest[] @relation("ExchangeTarget")
+  purchase_initiated     PurchaseRequest[] @relation("PurchaseInitiator")
+  purchase_received      PurchaseRequest[] @relation("PurchaseTarget")
+  ratings_given          Rating[]          @relation("RatingGiver")
+  ratings_received       Rating[]          @relation("RatingReceiver")
+  reports_filed          Report[]          @relation("ReportReporter")
+  reports_received       Report[]          @relation("ReportReported")
+  notifications          Notification[]
+  ads_managed            Ad[]              @relation("AdAdmin")
+  verifications          UserVerification[]
+  email_verifications    EmailVerification[]
+  password_resets        PasswordReset[]
+  user_roles             UserRole[]
+  histories_changed      TransactionHistory[] @relation("HistoryChanger")
+  reports_resolved       Report[]          @relation("ReportResolver")
+  verifications_done     UserVerification[] @relation("VerificationVerifier")
+
+  @@map("users")
+}
+
+model Role {
+  role_id      Int      @id @default(autoincrement())
+  role_name    String   @unique @db.VarChar(50)
+  description  String?
+  created_at   DateTime @default(now())
+  deleted_at   DateTime?
+
+  user_roles   UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  user_role_id Int      @id @default(autoincrement())
+  user_id      Int
+  role_id      Int
+  assigned_at  DateTime @default(now())
+  deleted_at   DateTime?
+
+  user User @relation(fields: [user_id], references: [user_id])
+  role Role @relation(fields: [role_id], references: [role_id])
+
+  @@unique([user_id, role_id])
+  @@map("user_roles")
+}
+
+model UserVerification {
+  verification_id     Int               @id @default(autoincrement())
+  user_id             Int
+  id_document_path    String            @db.VarChar(500)
+  verification_status VerificationStatus @default(PENDING)
+  submitted_at        DateTime          @default(now())
+  verified_at         DateTime?
+  rejected_at         DateTime?
+  rejection_reason    String?
+  verified_by         Int?
+  created_at          DateTime          @default(now())
+  updated_at          DateTime          @updatedAt
+  deleted_at          DateTime?
+
+  user        User  @relation(fields: [user_id], references: [user_id])
+  verifier    User? @relation("VerificationVerifier", fields: [verified_by], references: [user_id])
+
+  @@map("user_verifications")
+}
+
+model EmailVerification {
+  id          Int      @id @default(autoincrement())
+  user_id     Int
+  token       String   @db.VarChar(255)
+  expires_at  DateTime
+  verified_at DateTime?
+  is_used     Boolean  @default(false)
+  created_at  DateTime @default(now())
+  deleted_at  DateTime?
+
+  user User @relation(fields: [user_id], references: [user_id])
+
+  @@map("email_verifications")
+}
+
+model PasswordReset {
+  id          Int      @id @default(autoincrement())
+  user_id     Int
+  token       String   @db.VarChar(255)
+  expires_at  DateTime
+  is_used     Boolean  @default(false)
+  requested_at DateTime @default(now())
+  reset_at    DateTime?
+  deleted_at  DateTime?
+
+  user User @relation(fields: [user_id], references: [user_id])
+
+  @@map("password_resets")
+}
+
+model Category {
+  category_id       Int      @id @default(autoincrement())
+  category_name     String   @unique @db.VarChar(50)
+  description       String?
+  icon              String?  @db.VarChar(50)
+  parent_category_id Int?
+  display_order     Int      @default(0)
+  created_at        DateTime @default(now())
+  deleted_at        DateTime?
+
+  parent   Category?  @relation("CategoryHierarchy", fields: [parent_category_id], references: [category_id])
+  children Category[] @relation("CategoryHierarchy")
+  products Product[]
+
+  @@map("categories")
+}
+
+model Tag {
+  tag_id     Int      @id @default(autoincrement())
+  tag_name   String   @unique @db.VarChar(50)
+  created_at DateTime @default(now())
+  deleted_at DateTime?
+
+  product_tags ProductTag[]
+
+  @@map("tags")
+}
+
+model Product {
+  product_id          Int               @id @default(autoincrement())
+  user_id             Int
+  category_id         Int
+  city_id             Int
+  title               String            @db.VarChar(200)
+  description         String            @db.Text
+  condition           ProductCondition
+  price               Decimal?          @db.Decimal(10, 2)
+  exchange_preference ExchangePreference @default(BOTH)
+  availability_status AvailabilityStatus @default(AVAILABLE)
+  views_count         Int               @default(0)
+  is_featured         Boolean           @default(false)
+  featured_until      DateTime?
+  created_at          DateTime          @default(now())
+  updated_at          DateTime          @updatedAt
+  additional_info     String?
+  deleted_at          DateTime?
+
+  user              User              @relation("ProductOwner", fields: [user_id], references: [user_id])
+  category          Category          @relation(fields: [category_id], references: [category_id])
+  city              City              @relation("ProductCity", fields: [city_id], references: [city_id])
+  images            Image[]
+  product_tags      ProductTag[]
+  exchange_offered  ExchangeRequest[] @relation("ExchangeOffered")
+  exchange_requested ExchangeRequest[] @relation("ExchangeRequested")
+  purchase_requests PurchaseRequest[]
+  ads               Ad[]
+  reports           Report[]
+
+  @@index([user_id])
+  @@index([category_id])
+  @@index([city_id])
+  @@index([availability_status])
+  @@index([title])
+  @@index([created_at])
+  @@map("products")
+}
+
+model Image {
+  image_id     Int      @id @default(autoincrement())
+  product_id   Int
+  image_url    String   @db.VarChar(500)
+  image_order  Int      @default(0)
+  uploaded_at  DateTime @default(now())
+  deleted_at   DateTime?
+
+  product Product @relation(fields: [product_id], references: [product_id])
+
+  @@map("images")
+}
+
+model ProductTag {
+  product_tag_id Int      @id @default(autoincrement())
+  product_id     Int
+  tag_id         Int
+  created_at     DateTime @default(now())
+
+  product Product @relation(fields: [product_id], references: [product_id])
+  tag     Tag     @relation(fields: [tag_id], references: [tag_id])
+
+  @@unique([product_id, tag_id])
+  @@map("product_tags")
+}
+
+model ExchangeRequest {
+  exchange_request_id   Int           @id @default(autoincrement())
+  initiator_user_id     Int
+  target_user_id        Int
+  initiator_product_id  Int
+  target_product_id     Int
+  request_status        RequestStatus @default(PENDING)
+  initiator_message     String?
+  target_response_notes String?
+  requested_at          DateTime     @default(now())
+  responded_at          DateTime?
+  accepted_at           DateTime?
+  rejected_at           DateTime?
+  completed_at          DateTime?
+  cancelled_at          DateTime?
+  notes                 String?
+  deleted_at            DateTime?
+
+  initiator User    @relation("ExchangeInitiator", fields: [initiator_user_id], references: [user_id])
+  target    User    @relation("ExchangeTarget", fields: [target_user_id], references: [user_id])
+  offered   Product @relation("ExchangeOffered", fields: [initiator_product_id], references: [product_id])
+  requested Product @relation("ExchangeRequested", fields: [target_product_id], references: [product_id])
+
+  @@index([initiator_user_id, target_user_id])
+  @@index([request_status])
+  @@map("exchange_requests")
+}
+
+model PurchaseRequest {
+  purchase_request_id   Int           @id @default(autoincrement())
+  initiator_user_id     Int
+  target_user_id        Int
+  product_id            Int
+  offered_price         Decimal       @db.Decimal(10, 2)
+  request_status        RequestStatus @default(PENDING)
+  buyer_message         String?
+  seller_response_notes String?
+  requested_at          DateTime     @default(now())
+  responded_at          DateTime?
+  accepted_at           DateTime?
+  rejected_at           DateTime?
+  completed_at          DateTime?
+  cancelled_at          DateTime?
+  notes                 String?
+  deleted_at            DateTime?
+
+  initiator User    @relation("PurchaseInitiator", fields: [initiator_user_id], references: [user_id])
+  target    User    @relation("PurchaseTarget", fields: [target_user_id], references: [user_id])
+  product   Product @relation(fields: [product_id], references: [product_id])
+
+  @@index([initiator_user_id, target_user_id])
+  @@index([request_status])
+  @@map("purchase_requests")
+}
+
+model Rating {
+  rating_id        Int              @id @default(autoincrement())
+  rated_entity_type RatedEntityType
+  entity_id        Int
+  rater_user_id    Int
+  rated_user_id    Int
+  rating_score     Int
+  review           String?
+  created_at       DateTime         @default(now())
+  updated_at       DateTime         @updatedAt
+  deleted_at       DateTime?
+
+  rater User @relation("RatingGiver", fields: [rater_user_id], references: [user_id])
+  rated User @relation("RatingReceiver", fields: [rated_user_id], references: [user_id])
+
+  @@unique([rated_entity_type, entity_id, rater_user_id, rated_user_id])
+  @@map("ratings")
+}
+
+model Report {
+  report_id       Int          @id @default(autoincrement())
+  reporter_user_id Int
+  reported_user_id Int
+  product_id     Int?
+  report_type    ReportType
+  description    String       @db.Text
+  report_status  ReportStatus @default(PENDING)
+  admin_response String?
+  created_at     DateTime     @default(now())
+  resolved_at    DateTime?
+  resolved_by    Int?
+  deleted_at     DateTime?
+
+  reporter User    @relation("ReportReporter", fields: [reporter_user_id], references: [user_id])
+  reported User    @relation("ReportReported", fields: [reported_user_id], references: [user_id])
+  product  Product? @relation(fields: [product_id], references: [product_id])
+  resolver User?   @relation("ReportResolver", fields: [resolved_by], references: [user_id])
+
+  @@index([report_status])
+  @@map("reports")
+}
+
+model Notification {
+  notification_id     Int              @id @default(autoincrement())
+  user_id             Int
+  notification_type   NotificationType
+  related_entity_type RelatedEntityType?
+  related_entity_id   Int?
+  message             String
+  is_read             Boolean          @default(false)
+  created_at          DateTime         @default(now())
+  read_at             DateTime?
+  deleted_at          DateTime?
+
+  user User @relation(fields: [user_id], references: [user_id])
+
+  @@index([user_id, is_read])
+  @@map("notifications")
+}
+
+model Ad {
+  ad_id        Int         @id @default(autoincrement())
+  product_id   Int
+  admin_user_id Int
+  start_date   DateTime
+  end_date     DateTime
+  ad_position  AdPosition  @default(DASHBOARD)
+  display_order Int        @default(0)
+  is_active    Boolean     @default(true)
+  created_at   DateTime    @default(now())
+  updated_at   DateTime    @updatedAt
+  deleted_at   DateTime?
+
+  product Product @relation(fields: [product_id], references: [product_id])
+  admin   User    @relation("AdAdmin", fields: [admin_user_id], references: [user_id])
+
+  @@map("ads")
+}
+
+model TransactionHistory {
+  history_id      Int           @id @default(autoincrement())
+  transaction_type TransactionType
+  entity_id       Int
+  status_before   RequestStatus?
+  status_after    RequestStatus
+  notes           String?
+  changed_by      Int
+  changed_at      DateTime      @default(now())
+  deleted_at      DateTime?
+
+  changer User @relation("HistoryChanger", fields: [changed_by], references: [user_id])
+
+  @@map("transaction_history")
+}
