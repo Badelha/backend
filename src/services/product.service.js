@@ -81,10 +81,6 @@ class ProductService {
       where.category_id = Number(filters.categoryId);
     }
 
-    if (filters.cityId) {
-      where.city_id = Number(filters.cityId);
-    }
-
     if (filters.condition) {
       where.condition = filters.condition;
     }
