@@ -29,28 +29,31 @@ class UserService {
     const [users, total] = await Promise.all([
       prisma.user.findMany({
         where,
-        include: {
-          city: true,
-          user_roles: {
-            where: { deleted_at: null },
-            include: { role: true },
-          },
-        },
-        skip,
-        take,
-        orderBy: { created_at: 'desc' },
         select: {
           user_id: true,
           full_name: true,
           phone_number: true,
+          address: true,
           email: true,
           account_status: true,
           is_verified: true,
           created_at: true,
           last_login: true,
+          total_transactions: true,
+          city_id: true,
           city: true,
-          user_roles: true,
+          user_roles: {
+            where: { deleted_at: null },
+            select: {
+              role_id: true,
+              user_id: true,
+              role: true,
+            },
+          },
         },
+        skip,
+        take,
+        orderBy: { created_at: 'desc' },
       }),
       prisma.user.count({ where }),
     ]);
@@ -67,11 +70,26 @@ class UserService {
         user_id: userId,
         deleted_at: null,
       },
-      include: {
+      select: {
+        user_id: true,
+        full_name: true,
+        phone_number: true,
+        address: true,
+        email: true,
+        account_status: true,
+        is_verified: true,
+        created_at: true,
+        last_login: true,
+        total_transactions: true,
+        city_id: true,
         city: true,
         user_roles: {
           where: { deleted_at: null },
-          include: { role: true },
+          select: {
+            role_id: true,
+            user_id: true,
+            role: true,
+          },
         },
       },
     });
@@ -103,6 +121,7 @@ class UserService {
   static async updateProfile(userId, data) {
     const user = await prisma.user.findFirst({
       where: { user_id: userId, deleted_at: null },
+      select: { user_id: true },
     });
 
     if (!user) {
@@ -118,11 +137,26 @@ class UserService {
     const updatedUser = await prisma.user.update({
       where: { user_id: userId },
       data: updateData,
-      include: {
+      select: {
+        user_id: true,
+        full_name: true,
+        phone_number: true,
+        address: true,
+        email: true,
+        account_status: true,
+        is_verified: true,
+        created_at: true,
+        last_login: true,
+        total_transactions: true,
+        city_id: true,
         city: true,
         user_roles: {
           where: { deleted_at: null },
-          include: { role: true },
+          select: {
+            role_id: true,
+            user_id: true,
+            role: true,
+          },
         },
       },
     });
@@ -137,6 +171,7 @@ class UserService {
   static async updateUserStatus(userId, status) {
     const user = await prisma.user.findFirst({
       where: { user_id: userId, deleted_at: null },
+      select: { user_id: true },
     });
 
     if (!user) {
@@ -151,11 +186,26 @@ class UserService {
     const updatedUser = await prisma.user.update({
       where: { user_id: userId },
       data: { account_status: status },
-      include: {
+      select: {
+        user_id: true,
+        full_name: true,
+        phone_number: true,
+        address: true,
+        email: true,
+        account_status: true,
+        is_verified: true,
+        created_at: true,
+        last_login: true,
+        total_transactions: true,
+        city_id: true,
         city: true,
         user_roles: {
           where: { deleted_at: null },
-          include: { role: true },
+          select: {
+            role_id: true,
+            user_id: true,
+            role: true,
+          },
         },
       },
     });
@@ -170,6 +220,7 @@ class UserService {
   static async deleteUser(userId) {
     const user = await prisma.user.findFirst({
       where: { user_id: userId, deleted_at: null },
+      select: { user_id: true },
     });
 
     if (!user) {

@@ -1,4 +1,5 @@
 // auth.middleware.js
+
 const jwt = require('jsonwebtoken');
 const prisma = require('../config/prisma');
 const config = require('../config/env');
@@ -20,12 +21,27 @@ const authenticate = async (req, res, next) => {
         user_id: decoded.userId,
         deleted_at: null,
       },
-      include: {
+      select: {
+        user_id: true,
+        full_name: true,
+        phone_number: true,
+        address: true,
+        email: true,
+        account_status: true,
+        is_verified: true,
+        created_at: true,
+        last_login: true,
+        total_transactions: true,
+        city_id: true,
+        city: true,
         user_roles: {
           where: { deleted_at: null },
-          include: { role: true },
+          select: {
+            role_id: true,
+            user_id: true,
+            role: true,
+          },
         },
-        city: true,
       },
     });
 
@@ -53,4 +69,7 @@ const authenticate = async (req, res, next) => {
     console.error('Auth middleware error:', error.stack);
     return errorResponse(res, 500, 'Authentication error');
   }
+};
+module.exports = {
+  authenticate,
 };

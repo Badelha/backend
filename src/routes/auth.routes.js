@@ -33,9 +33,9 @@ router.post('/reset-password', resetPasswordValidator, validate, AuthController.
 // ============= Protected Routes =============
 
 // Get user profile
-// router.get('/profile', authenticate, AuthController.getProfile);
+router.get('/profile', authenticate, AuthController.getProfile);
 
 // Logout user
-//router.post('/logout', authenticate, AuthController.logout);
+router.post('/logout', authenticate, AuthController.logout);
 
 module.exports = router;

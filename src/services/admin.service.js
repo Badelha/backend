@@ -245,11 +245,26 @@ class AdminService {
     const [users, total] = await Promise.all([
       prisma.user.findMany({
         where,
-        include: {
+        select: {
+          user_id: true,
+          full_name: true,
+          phone_number: true,
+          address: true,
+          email: true,
+          account_status: true,
+          is_verified: true,
+          created_at: true,
+          last_login: true,
+          total_transactions: true,
+          city_id: true,
           city: true,
           user_roles: {
             where: { deleted_at: null },
-            include: { role: true },
+            select: {
+              role_id: true,
+              user_id: true,
+              role: true,
+            },
           },
         },
         orderBy: { created_at: 'desc' },

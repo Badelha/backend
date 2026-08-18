@@ -13,6 +13,7 @@ class AuthService {
     // Check if email exists
     const existingEmail = await prisma.user.findUnique({
       where: { email: userData.email },
+      select: { user_id: true },
     });
     if (existingEmail) {
       throw new Error('EMAIL_ALREADY_EXISTS');
@@ -21,6 +22,7 @@ class AuthService {
     // Check if phone exists
     const existingPhone = await prisma.user.findUnique({
       where: { phone_number: userData.phoneNumber },
+      select: { user_id: true },
     });
     if (existingPhone) {
       throw new Error('PHONE_ALREADY_EXISTS');
@@ -102,11 +104,27 @@ class AuthService {
         email,
         deleted_at: null,
       },
-      include: {
+      select: {
+        user_id: true,
+        full_name: true,
+        phone_number: true,
+        address: true,
+        email: true,
+        password_hash: true,
+        account_status: true,
+        is_verified: true,
+        created_at: true,
+        last_login: true,
+        total_transactions: true,
+        city_id: true,
         city: true,
         user_roles: {
           where: { deleted_at: null },
-          include: { role: true },
+          select: {
+            role_id: true,
+            user_id: true,
+            role: true,
+          },
         },
       },
     });
@@ -160,6 +178,10 @@ class AuthService {
         deleted_at: null,
         refresh_token: refreshToken,
         refresh_token_expires: { gt: new Date() },
+      },
+      select: {
+        user_id: true,
+        account_status: true,
       },
     });
 
@@ -225,6 +247,7 @@ class AuthService {
   static async forgotPassword(email) {
     const user = await prisma.user.findFirst({
       where: { email, deleted_at: null },
+      select: { user_id: true, email: true },
     });
 
     if (!user) {
@@ -297,11 +320,26 @@ class AuthService {
         user_id: userId,
         deleted_at: null,
       },
-      include: {
+      select: {
+        user_id: true,
+        full_name: true,
+        phone_number: true,
+        address: true,
+        email: true,
+        account_status: true,
+        is_verified: true,
+        created_at: true,
+        last_login: true,
+        total_transactions: true,
+        city_id: true,
         city: true,
         user_roles: {
           where: { deleted_at: null },
-          include: { role: true },
+          select: {
+            role_id: true,
+            user_id: true,
+            role: true,
+          },
         },
       },
     });
