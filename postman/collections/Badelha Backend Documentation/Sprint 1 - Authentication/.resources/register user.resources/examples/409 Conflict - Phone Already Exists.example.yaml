@@ -1,0 +1,34 @@
+$kind: http-example
+name: '409 Conflict - Phone Already Exists'
+request:
+  url: '{{baseUrl}}/api/auth/register'
+  method: POST
+  headers:
+    - key: Content-Type
+      value: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "fullName": "John Doe",
+        "email": "newuser@example.com",
+        "password": "Secret@123",
+        "phoneNumber": "0599999999",
+        "address": "Ramallah, Palestine",
+        "cityId": 1
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    - key: Content-Type
+      value: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "success": false,
+        "statusCode": 409,
+        "message": "Phone number already exists"
+      }
+order: 4000

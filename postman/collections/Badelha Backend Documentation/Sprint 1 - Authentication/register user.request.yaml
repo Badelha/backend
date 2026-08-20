@@ -1,0 +1,205 @@
+$kind: http-request
+name: register user
+description: |-
+  ### Register User
+
+  **Endpoint**
+
+  POST /api/auth/register
+
+  **Description**
+
+  Registers a new user account in the Badelha platform. On success, a new user record is created with `account_status` set to `PENDING_VERIFICATION` and `is_verified` set to `false`. A JWT access token and refresh token are returned immediately so the user can interact with the API before verifying their email.
+
+  A verification email is sent automatically to the provided address after registration. Use the `/api/auth/verify-email` endpoint with the token from that email to activate the account.
+
+  > 📧 In development mode, the verification token can be retrieved programmatically via `GET /api/auth/dev/email-verification-token?email=<email>` — this is used automatically by the Postman pre-request script.
+
+  ---
+
+  ### Request Body
+
+  ```json
+  {
+    "fullName": "John Doe",
+    "phoneNumber": "0599123456",
+    "address": "Ramallah, Palestine",
+    "email": "john@example.com",
+    "password": "Secret@123",
+    "cityId": 1
+  }
+  ```
+
+  ---
+
+  ### Validation Rules
+
+  | Field | Rules |
+  |---|---|
+  | `fullName` | Required · 3–100 characters |
+  | `phoneNumber` | Required · Valid Palestinian format (`05XXXXXXXX`) · Exactly 10 digits |
+  | `address` | Required · 5–255 characters |
+  | `email` | Required · Valid email format |
+  | `password` | Required · Min 8 chars · Uppercase · Lowercase · Number · Special character (`!@#$%^&*` etc.) |
+  | `cityId` | Required · Positive integer |
+
+  ---
+
+  ### Success Response — `201 Created`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 201,
+    "message": "User registered successfully",
+    "data": {
+      "user": {
+        "user_id": 1,
+        "full_name": "John Doe",
+        "email": "john@example.com",
+        "phone_number": "0599123456",
+        "address": "Ramallah, Palestine",
+        "city_id": 1,
+        "account_status": "PENDING_VERIFICATION",
+        "is_verified": false,
+        "created_at": "2024-01-01T00:00:00.000Z",
+        "city": { "city_id": 1, "city_name": "Nablus" }
+      },
+      "accessToken": "<jwt_access_token>",
+      "refreshToken": "<jwt_refresh_token>"
+    }
+  }
+  ```
+
+  > 🍪 The `refreshToken` is also set as an `HttpOnly` cookie scoped to `/api/auth/refresh-token` (30-day expiry).
+
+  ---
+
+  ### Error Responses
+
+  | Status | Message | Cause |
+  |---|---|---|
+  | `400 Bad Request` | Validation error | Missing or invalid fields |
+  | `409 Conflict` | Email already exists | An account with this email is already registered |
+  | `409 Conflict` | Phone number already exists | An account with this phone number is already registered |
+  | `500 Internal Server Error` | Internal server error | Unexpected server-side failure |
+url: '{{baseUrl}}/api/auth/register'
+method: POST
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "fullName": "Test User",
+      "email": "{{testEmail}}",
+      "password": "{{testPassword}}",
+      "phoneNumber": "{{testPhone}}",
+      "address": "Ramallah, Palestine",
+      "cityId": 1
+    }
+scripts:
+  - type: preRequest
+    language: text/javascript
+    code: |-
+      // Generate unique test credentials on every run to avoid conflicts
+      const ts = Date.now();
+      const email = `testuser_${ts}@example.com`;
+      const phone = `05${String(ts).slice(-8)}`;
+      const password = 'Secret@123';
+      pm.environment.set('testEmail', email);
+      pm.environment.set('testPhone', phone);
+      pm.environment.set('testPassword', password);
+      console.log('🔧 Generated test credentials:', email, phone);
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 201", function () {
+          pm.response.to.have.status(201);
+      });
+
+      pm.test("Response has success flag set to true", function () {
+          pm.expect(json.success).to.be.true;
+      });
+
+      pm.test("Response message is 'User registered successfully'", function () {
+          pm.expect(json.message).to.eql("User registered successfully");
+      });
+
+      pm.test("Response contains data object", function () {
+          pm.expect(json).to.have.property("data");
+          pm.expect(json.data).to.be.an("object");
+      });
+
+      pm.test("Response data contains user object", function () {
+          pm.expect(json.data).to.have.property("user");
+          pm.expect(json.data.user).to.be.an("object");
+      });
+
+      pm.test("User object has required fields", function () {
+          const user = json.data.user;
+          pm.expect(user).to.have.property("user_id");
+          pm.expect(user).to.have.property("full_name");
+          pm.expect(user).to.have.property("email");
+          pm.expect(user).to.have.property("phone_number");
+          pm.expect(user).to.have.property("address");
+          pm.expect(user).to.have.property("city_id");
+          pm.expect(user).to.have.property("account_status");
+          pm.expect(user).to.have.property("is_verified");
+          pm.expect(user).to.have.property("created_at");
+          pm.expect(user).to.have.property("city");
+      });
+
+      pm.test("Account status is PENDING_VERIFICATION", function () {
+          pm.expect(json.data.user.account_status).to.eql("PENDING_VERIFICATION");
+      });
+
+      pm.test("is_verified is false on registration", function () {
+          pm.expect(json.data.user.is_verified).to.be.false;
+      });
+
+      pm.test("Response contains accessToken", function () {
+          pm.expect(json.data).to.have.property("accessToken");
+          pm.expect(json.data.accessToken).to.be.a("string").and.not.empty;
+      });
+
+      pm.test("Response contains refreshToken", function () {
+          pm.expect(json.data).to.have.property("refreshToken");
+          pm.expect(json.data.refreshToken).to.be.a("string").and.not.empty;
+      });
+
+      pm.test("Password hash is not exposed in response", function () {
+          pm.expect(json.data.user).to.not.have.property("password_hash");
+      });
+
+      pm.test("city object has city_id and city_name", function () {
+          const city = json.data.user.city;
+          pm.expect(city).to.have.property("city_id");
+          pm.expect(city).to.have.property("city_name");
+      });
+
+      if (pm.response.code === 201 && json.data?.accessToken) {
+          pm.environment.set("accessToken", json.data.accessToken);
+          pm.environment.set("refreshToken", json.data.refreshToken);
+          console.log("✅ accessToken and refreshToken saved to environment from register.");
+
+          // Fetch the email verification token from the dev endpoint
+          const email = pm.environment.get("testEmail");
+          const baseUrl = pm.environment.get("baseUrl");
+          pm.sendRequest(
+              `${baseUrl}/api/auth/dev/email-verification-token?email=${encodeURIComponent(email)}`,
+              function (err, res) {
+                  if (!err && res.code === 200) {
+                      const token = res.json().token;
+                      pm.environment.set("emailVerificationToken", token);
+                      console.log("✅ emailVerificationToken saved to environment.");
+                  } else {
+                      console.warn("⚠️ Could not fetch emailVerificationToken:", err || res.text());
+                  }
+              }
+          );
+      }
+order: 1787060946623
