@@ -1,0 +1,101 @@
+$kind: http-request
+name: verify email
+description: |-
+  ### Verify Email
+
+  **Endpoint**
+
+  GET /api/auth/verify-email?token=<verification_token>
+
+  **Description**
+
+  Verifies a user's email address using the token sent to their inbox after registration. On success, the user's `is_verified` flag is set to `true` and their `account_status` is updated from `PENDING_VERIFICATION` to `ACTIVE`.
+
+  The verification token is single-use and expires after **24 hours**. Once used, the token is marked as `is_used = true` and cannot be reused.
+
+  > 📧 The verification email is sent automatically after a successful `/api/auth/register` call.
+
+  ---
+
+  ### Query Parameters
+
+  | Parameter | Type | Required | Description |
+  |---|---|---|---|
+  | `token` | string | ✅ | The verification token received in the email |
+
+  **Example Request**
+
+  ```
+  GET {{baseUrl}}/api/auth/verify-email?token=a3f8c2e1d4b7...
+  ```
+
+  ---
+
+  ### Validation Rules
+
+  - `token` query parameter must be present in the request URL.
+  - Token must exist in the database, not be used (`is_used = false`), and not be expired (`expires_at > now`).
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Email verified successfully",
+    "data": {
+      "message": "Email verified successfully"
+    }
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Message | Cause |
+  |---|---|---|
+  | `400 Bad Request` | Verification token required | `token` query param is missing |
+  | `400 Bad Request` | Invalid or expired token | Token not found, already used, or expired |
+url: '{{baseUrl}}/api/auth/verify-email'
+method: GET
+queryParams:
+  - key: token
+    value: '{{emailVerificationToken}}'
+scripts:
+  - type: preRequest
+    language: text/javascript
+    code: |-
+      // Fetch the latest unused email verification token for the registered test user
+      // from the backend DB via a helper endpoint, or use the token saved by register.
+      // If your backend exposes a dev/test endpoint to retrieve the token, call it here.
+      // Otherwise, the token must be set manually or via a DB query script before the run.
+      const token = pm.environment.get('emailVerificationToken');
+      if (!token) {
+          console.warn('⚠️ emailVerificationToken is not set. Please set it from the DB or email before running.');
+      }
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has success flag set to true", function () {
+          pm.expect(json.success).to.be.true;
+      });
+
+      pm.test("Response contains data object", function () {
+          pm.expect(json).to.have.property("data");
+          pm.expect(json.data).to.be.an("object");
+      });
+
+      pm.test("Response data contains message field", function () {
+          pm.expect(json.data).to.have.property("message");
+          pm.expect(json.data.message).to.eql("Email verified successfully");
+      });
+order: 1787060946626

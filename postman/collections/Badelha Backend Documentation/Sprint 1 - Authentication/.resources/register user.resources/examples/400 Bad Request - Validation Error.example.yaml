@@ -1,0 +1,42 @@
+$kind: http-example
+name: '400 Bad Request - Validation Error'
+request:
+  url: '{{baseUrl}}/api/auth/register'
+  method: POST
+  headers:
+    - key: Content-Type
+      value: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "fullName": "Jo",
+        "email": "not-an-email",
+        "password": "weak",
+        "phoneNumber": "123",
+        "address": "Hi",
+        "cityId": 0
+      }
+response:
+  statusCode: 400
+  statusText: Bad Request
+  headers:
+    - key: Content-Type
+      value: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "success": false,
+        "statusCode": 400,
+        "message": "Validation error",
+        "errors": [
+          "Full name must be between 3 and 100 characters",
+          "Invalid email format",
+          "Password must be at least 8 characters",
+          "Invalid Palestinian phone number format (e.g., 0599123456)",
+          "Address must be between 5 and 255 characters",
+          "City ID must be a positive integer"
+        ]
+      }
+order: 2000

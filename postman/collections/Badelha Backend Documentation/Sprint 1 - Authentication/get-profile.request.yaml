@@ -1,0 +1,126 @@
+$kind: http-request
+name: get profile
+description: |-
+  ### Get User Profile
+
+  **Endpoint**
+
+  GET /api/auth/profile
+
+  **Description**
+
+  Returns the full profile of the currently authenticated user, including personal details, city, assigned roles, and their average rating on the platform.
+
+  > 🔒 This is a **protected route**. A valid JWT access token must be provided in the `Authorization` header as a Bearer token.
+
+  ---
+
+  ### Authentication
+
+  | Type | Header | Format |
+  |---|---|---|
+  | Bearer Token | `Authorization` | `Bearer <jwt_access_token>` |
+
+  Obtain the access token from `/api/auth/login` or `/api/auth/register`.
+
+  > ⚠️ The token is verified against the JWT secret. Expired or invalid tokens return `401`. Banned or suspended accounts return `403`.
+
+  ---
+
+  ### Request Body
+
+  No request body required.
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Profile retrieved successfully",
+    "data": {
+      "user_id": 1,
+      "full_name": "John Doe",
+      "email": "john@example.com",
+      "phone_number": "0599123456",
+      "address": "Ramallah, Palestine",
+      "city_id": 3,
+      "account_status": "ACTIVE",
+      "is_verified": true,
+      "created_at": "2024-01-01T00:00:00.000Z",
+      "last_login": "2024-06-01T10:00:00.000Z",
+      "total_transactions": 12,
+      "city": { "city_id": 3, "city_name": "Ramallah" },
+      "user_roles": [{ "role_id": 1, "role": { "role_name": "USER" } }],
+      "average_rating": 4.5
+    }
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Message | Cause |
+  |---|---|---|
+  | `401 Unauthorized` | Authentication required | `Authorization` header is missing |
+  | `401 Unauthorized` | Invalid token | Token is malformed or invalid |
+  | `401 Unauthorized` | Token expired | JWT access token has expired — use `/api/auth/refresh-token` |
+  | `403 Forbidden` | Account is banned | User account has been banned |
+  | `403 Forbidden` | Account is suspended | User account has been suspended |
+  | `404 Not Found` | User not found | Authenticated user no longer exists in the database |
+  | `500 Internal Server Error` | Internal server error | Unexpected server-side failure |
+url: '{{baseUrl}}/api/auth/profile'
+method: GET
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has success flag set to true", function () {
+          pm.expect(json.success).to.be.true;
+      });
+
+      pm.test("Response contains data object", function () {
+          pm.expect(json).to.have.property("data");
+          pm.expect(json.data).to.be.an("object");
+      });
+
+      pm.test("Profile has required fields", function () {
+          const data = json.data;
+          pm.expect(data).to.have.property("user_id");
+          pm.expect(data).to.have.property("full_name");
+          pm.expect(data).to.have.property("email");
+          pm.expect(data).to.have.property("phone_number");
+          pm.expect(data).to.have.property("address");
+          pm.expect(data).to.have.property("account_status");
+          pm.expect(data).to.have.property("is_verified");
+          pm.expect(data).to.have.property("city");
+          pm.expect(data).to.have.property("user_roles");
+          pm.expect(data).to.have.property("average_rating");
+      });
+
+      pm.test("Password hash is not exposed in response", function () {
+          pm.expect(json.data).to.not.have.property("password_hash");
+      });
+
+      pm.test("user_roles is an array", function () {
+          pm.expect(json.data.user_roles).to.be.an("array");
+      });
+
+      pm.test("average_rating is a number", function () {
+          pm.expect(json.data.average_rating).to.be.a("number");
+      });
+order: 1787060946629

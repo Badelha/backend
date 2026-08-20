@@ -1,0 +1,92 @@
+$kind: http-request
+name: refresh token
+description: |-
+  ### Refresh Access Token
+
+  **Endpoint**
+
+  POST /api/auth/refresh-token
+
+  **Description**
+
+  Issues a new pair of JWT access token and refresh token using the existing refresh token stored in the `refreshToken` HttpOnly cookie. The old refresh token is invalidated and replaced with a new one in the database.
+
+  > 🍪 This endpoint reads the refresh token from the `refreshToken` cookie automatically set during login or registration. No request body is needed.
+
+  > ⚠️ The refresh token must be valid, not expired (30-day TTL), and must match the one stored in the database for the user. Banned accounts are rejected.
+
+  ---
+
+  ### Request Body
+
+  No request body required. The refresh token is read from the `refreshToken` cookie.
+
+  ---
+
+  ### Authentication
+
+  | Type | Details |
+  |---|---|
+  | Cookie | `refreshToken` — HttpOnly cookie set by `/api/auth/login` or `/api/auth/register` |
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Token refreshed successfully",
+    "data": {
+      "accessToken": "<new_jwt_access_token>",
+      "refreshToken": "<new_jwt_refresh_token>"
+    }
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Message | Cause |
+  |---|---|---|
+  | `401 Unauthorized` | Refresh token required | Cookie is missing |
+  | `401 Unauthorized` | Invalid or expired token | Token is invalid, expired, or does not match the stored token |
+  | `403 Forbidden` | Account is banned | User account has been banned |
+url: '{{baseUrl}}/api/auth/refresh-token'
+method: POST
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has success flag set to true", function () {
+          pm.expect(json.success).to.be.true;
+      });
+
+      pm.test("Response contains data object", function () {
+          pm.expect(json).to.have.property("data");
+          pm.expect(json.data).to.be.an("object");
+      });
+
+      pm.test("Response contains new accessToken", function () {
+          pm.expect(json.data).to.have.property("accessToken");
+          pm.expect(json.data.accessToken).to.be.a("string").and.not.empty;
+      });
+
+      pm.test("Response contains new refreshToken", function () {
+          pm.expect(json.data).to.have.property("refreshToken");
+          pm.expect(json.data.refreshToken).to.be.a("string").and.not.empty;
+      });
+
+      if (pm.response.code === 200 && json.data?.accessToken) {
+          pm.environment.set("accessToken", json.data.accessToken);
+          console.log("✅ accessToken updated in environment from refresh-token.");
+      }
+order: 1787060946625

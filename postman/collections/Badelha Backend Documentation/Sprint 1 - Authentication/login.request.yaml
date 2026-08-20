@@ -1,0 +1,158 @@
+$kind: http-request
+name: login
+description: |-
+  ### Login User
+
+  **Endpoint**
+
+  POST /api/auth/login
+
+  **Description**
+
+  Authenticates an existing user with their email and password.
+
+  Returns a JWT access token and
+
+  sets an `HttpOnly` cookie containing the refresh token.
+
+  Also updates the user's `last_login` timestamp.
+
+  > ⚠️ The account must not be banned or suspended. Email verification is not required to log in, but account status is checked. 
+    
+
+  ---
+
+  ### Request Body
+
+  ``` json
+  {
+    "email": "john@example.com",
+    "password": "Secret@123"
+  }
+
+   ```
+
+  ---
+
+  ### Validation Rules
+
+  | Field | Rules |
+  | --- | --- |
+  | `email` | Required · Valid email format |
+  | `password` | Required · Minimum 8 characters |
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ``` json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Login successful",
+    "data": {
+      "user": {
+        "user_id": 1,
+        "full_name": "John Doe",
+        "email": "john@example.com",
+        "phone_number": "0599123456",
+        "address": "Ramallah, Palestine",
+        "city_id": 3,
+        "account_status": "ACTIVE",
+        "is_verified": true,
+        "last_login": "2024-01-01T00:00:00.000Z",
+        "total_transactions": 5,
+        "city": { "city_id": 3, "city_name": "Ramallah" },
+        "user_roles": [{ "role_id": 1, "role": { "role_name": "USER" } }]
+      },
+      "accessToken": "<jwt_access_token>",
+      "refreshToken": "<jwt_refresh_token>"
+    }
+  }
+
+   ```
+
+  > 🍪 A `refreshToken` cookie is also set automatically (`HttpOnly`, `SameSite=Strict`, 30-day expiry, scoped to `/api/auth/refresh-token`). 
+    
+
+  ---
+
+  ### Error Responses
+
+  | Status | Message | Cause |
+  | --- | --- | --- |
+  | `400 Bad Request` | Validation error | Missing or invalid fields |
+  | `401 Unauthorized` | Invalid email or password | Credentials do not match |
+  | `403 Forbidden` | Account is banned | User account has been banned |
+  | `403 Forbidden` | Account is suspended | User account has been suspended |
+url: "{{baseUrl}}/api/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "{{testEmail}}",
+      "password": "{{testPassword}}"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has success flag set to true", function () {
+          pm.expect(json.success).to.be.true;
+      });
+
+      pm.test("Response contains data object", function () {
+          pm.expect(json).to.have.property("data");
+          pm.expect(json.data).to.be.an("object");
+      });
+
+      pm.test("Response data contains user object", function () {
+          pm.expect(json.data).to.have.property("user");
+          pm.expect(json.data.user).to.be.an("object");
+      });
+
+      pm.test("User object has required fields", function () {
+          const user = json.data.user;
+          pm.expect(user).to.have.property("user_id");
+          pm.expect(user).to.have.property("full_name");
+          pm.expect(user).to.have.property("email");
+          pm.expect(user).to.have.property("phone_number");
+          pm.expect(user).to.have.property("account_status");
+          pm.expect(user).to.have.property("is_verified");
+          pm.expect(user).to.have.property("last_login");
+          pm.expect(user).to.have.property("user_roles");
+      });
+
+      pm.test("Response contains accessToken", function () {
+          pm.expect(json.data).to.have.property("accessToken");
+          pm.expect(json.data.accessToken).to.be.a("string").and.not.empty;
+      });
+
+      pm.test("Response contains refreshToken", function () {
+          pm.expect(json.data).to.have.property("refreshToken");
+          pm.expect(json.data.refreshToken).to.be.a("string").and.not.empty;
+      });
+
+      pm.test("Password hash is not exposed in response", function () {
+          pm.expect(json.data.user).to.not.have.property("password_hash");
+      });
+
+      pm.test("user_roles is an array", function () {
+          pm.expect(json.data.user.user_roles).to.be.an("array");
+      });
+
+      if (pm.response.code === 200 && json.data?.accessToken) {
+          pm.environment.set("accessToken", json.data.accessToken);
+          pm.environment.set("refreshToken", json.data.refreshToken);
+          console.log("✅ accessToken and refreshToken saved to environment from login.");
+      }
+order: 1787060946624
