@@ -1,0 +1,6 @@
+$kind: http-request
+name: register
+description: ""
+url: ""
+method: GET
+order: 1166017023344710

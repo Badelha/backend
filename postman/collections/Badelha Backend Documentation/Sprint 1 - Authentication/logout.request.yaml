@@ -1,0 +1,94 @@
+$kind: http-request
+name: logout
+description: |-
+  ### Logout User
+
+  **Endpoint**
+
+  POST /api/auth/logout
+
+  **Description**
+
+  Logs out the currently authenticated user by clearing their refresh token from the database and removing the `refreshToken` HttpOnly cookie. After logout, the refresh token is no longer valid and cannot be used to obtain new access tokens.
+
+  > 🔒 This is a **protected route**. A valid JWT access token must be provided in the `Authorization` header as a Bearer token.
+
+  > ℹ️ The access token itself is not invalidated server-side (it remains valid until it naturally expires). To fully secure a session, clients should discard the access token on their end after logout.
+
+  ---
+
+  ### Authentication
+
+  | Type | Header | Format |
+  |---|---|---|
+  | Bearer Token | `Authorization` | `Bearer <jwt_access_token>` |
+
+  Obtain the access token from `/api/auth/login` or `/api/auth/register`.
+
+  ---
+
+  ### Request Body
+
+  No request body required.
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Logout successful",
+    "data": null
+  }
+  ```
+
+  > 🍪 The `refreshToken` cookie is cleared automatically on the client (scoped to `/api/auth/refresh-token`).
+
+  ---
+
+  ### Error Responses
+
+  | Status | Message | Cause |
+  |---|---|---|
+  | `401 Unauthorized` | Authentication required | `Authorization` header is missing |
+  | `401 Unauthorized` | Invalid token | Token is malformed or invalid |
+  | `401 Unauthorized` | Token expired | JWT access token has expired — use `/api/auth/refresh-token` first |
+  | `403 Forbidden` | Account is banned | User account has been banned |
+  | `403 Forbidden` | Account is suspended | User account has been suspended |
+  | `500 Internal Server Error` | Internal server error | Unexpected server-side failure |
+url: '{{baseUrl}}/api/auth/logout'
+method: POST
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has success flag set to true", function () {
+          pm.expect(json.success).to.be.true;
+      });
+
+      pm.test("Response message is Logout successful", function () {
+          pm.expect(json.message).to.eql("Logout successful");
+      });
+
+      pm.test("Response data is null", function () {
+          pm.expect(json.data).to.be.null;
+      });
+
+      if (pm.response.code === 200) {
+          pm.environment.unset("accessToken");
+          console.log("✅ accessToken cleared from environment after logout.");
+      }
+order: 1787060946630
