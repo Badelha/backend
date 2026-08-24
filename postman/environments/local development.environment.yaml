@@ -2,5 +2,4 @@ name: local development
 values:
   - key: baseUrl
     value: ''
-  - key: accessToken
-    value: ''
+color: 0

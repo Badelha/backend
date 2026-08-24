@@ -1,6 +1,450 @@
 $kind: http-request
 name: register
-description: ""
-url: ""
-method: GET
+description: |-
+  # **Register User**
+
+  ## Endpoint
+
+  HTTP POST /api/auth/registerShow more lines
+
+  ## Purpose
+
+  Create a new user account in the Badelha platform.
+
+  Upon successful registration:
+
+  - User record is created.
+      
+  - Password is hashed using bcrypt.
+      
+  - Account status is set to `PENDING_VERIFICATION`.
+      
+  - JWT Access Token is generated.
+      
+  - JWT Refresh Token is generated.
+      
+  - Verification email is prepared for the user.
+      
+
+  ---
+
+  ## Authentication
+
+  Plain Text1No authentication required.Show more lines
+
+  ---
+
+  ## Headers
+
+  | Header | Value |
+  | --- | --- |
+  | Content-Type | application/json |
+
+  ---
+
+  ## Request Body
+
+  JSON1{2 "fullName": "Dina Jendeya",3 "phoneNumber": "0595723456",4 "address": "Gazahero",5 "email": "dina1@test.com",6 "password": "Password123!",7 "cityId": 18}Show more lines
+
+  ### Request Fields
+
+  | Field | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | fullName | string | Yes | User full name |
+  | phoneNumber | string | Yes | Palestinian phone number |
+  | address | string | Yes | User address |
+  | email | string | Yes | User email |
+  | password | string | Yes | User password |
+  | cityId | integer | Yes | Existing city identifier |
+
+  ---
+
+  ## Validation Rules
+
+  ### fullName
+
+  Plain Text1Required23–100 characters3Letters and spaces onlyShow more lines
+
+  ### phoneNumber
+
+  Plain Text1Required2Format: 05XXXXXXXX3Exactly 10 digitsShow more lines
+
+  ### address
+
+  Plain Text1Required25–255 charactersShow more lines
+
+  ### email
+
+  Plain Text1Required2Must be a valid email addressShow more lines
+
+  ### password
+
+  Plain Text1Required2Minimum 8 characters3One uppercase letter4One lowercase letter5One number6One special characterShow more lines
+
+  ### cityId
+
+  Plain Text1Required2Positive integer3Must exist in cities tableShow more lines
+
+  ---
+
+  ## Business Logic
+
+  The registration process performs the following steps:
+
+  Validate request body
+
+  ↓
+
+  Check for existing email
+
+  ↓
+
+  Check for existing phone number
+
+  ↓
+
+  Hash password using bcrypt
+
+  ↓
+
+  Create user record
+
+  ↓
+
+  Assign default USER role
+
+  ↓
+
+  Generate verification token
+
+  ↓
+
+  Generate JWT tokens
+
+  ↓
+
+  Return response
+
+  ---
+
+  ## Success Response
+
+  ### Status
+
+  HTTP1201 CreatedShow more lines
+
+  ### Response Body
+
+  JSON{
+
+  "success": true,
+
+  "statusCode": 201,
+
+  "message": "User registered successfully",
+
+  "data": {
+
+  "user": {
+
+  "user_id": 1,
+
+  "full_name": "Dina Jendeya",
+
+  "email": "dina1@test.com",
+
+  "phone_number": "0595723456",
+
+  "city_id": 112 },
+
+  "accessToken": "",
+
+  "refreshToken": ""15 }
+
+  }
+
+  ---
+
+  ## Error Responses
+
+  ### Validation Error
+
+  HTTP
+
+  400 Bad Request
+
+  JSON
+
+  {
+
+  "success": false,
+
+  "message": "Validation error"
+
+  }
+
+  ---
+
+  ### Email Already Exists
+
+  HTTP
+
+  409 Conflict
+
+  JSON
+
+  {
+
+  "success": false,
+
+  "message": "Email already exists"
+
+  }
+
+  ---
+
+  ### Phone Number Already Exists
+
+  HTTP Conflict
+
+  JSON1{
+
+  "success": false,
+
+  "message": "Phone number already exists"
+
+  ---
+
+  ### Internal Server Error
+
+  HTTP 500 Internal Server ErrorEndFragment
+url: "{{baseUrl}}/api/auth/register"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \"fullName\": \"Dina Jendeya\",\r
+
+    \"phoneNumber\": \"0596723456\",\r
+
+    \"address\": \"Gazahero\",\r
+
+    \"email\": \"dina111@test.com\",\r
+
+    \"password\": \"Password123!\",\r
+
+    \"cityId\": 1\r
+
+    }"
+scripts:
+  - type: afterResponse
+    code: "scripts:\r
+
+      \    type: preRequest\r
+
+      \    language: text/javascript\r
+
+      \    code:\r
+
+      \      // Generate unique test credentials on every run to avoid conflicts\r
+
+      \      const ts = Date.now();\r
+
+      \      const email = `testuser_${ts}@example.com`;\r
+
+      \      const phone = `05${String(ts).slice(-8)}`;\r
+
+      \      const password = 'Secret@123';\r
+
+      \      pm.environment.set('testEmail', email);\r
+
+      \      pm.environment.set('testPhone', phone);\r
+
+      \      pm.environment.set('testPassword', password);\r
+
+      \      console.log('🔧 Generated test credentials:', email, phone);\r
+
+      \  - type: afterResponse\r
+
+      \    language: text/javascript\r
+
+      \    code: |-\r
+
+      \      const json = pm.response.json();\r
+
+      \r
+
+      \      pm.test(\"Status code is 201\", function () {\r
+
+      \          pm.response.to.have.status(201);\r
+
+      \      });\r
+
+      \r
+
+      \      pm.test(\"Response has success flag set to true\", function () {\r
+
+      \          pm.expect(json.success).to.be.true;\r
+
+      \      });\r
+
+      \r
+
+      \      pm.test(\"Response message is 'User registered successfully'\", function () {\r
+
+      \          pm.expect(json.message).to.eql(\"User registered successfully\");\r
+
+      \      });\r
+
+      \r
+
+      \      pm.test(\"Response contains data object\", function () {\r
+
+      \          pm.expect(json).to.have.property(\"data\");\r
+
+      \          pm.expect(json.data).to.be.an(\"object\");\r
+
+      \      });\r
+
+      \r
+
+      \      pm.test(\"Response data contains user object\", function () {\r
+
+      \          pm.expect(json.data).to.have.property(\"user\");\r
+
+      \          pm.expect(json.data.user).to.be.an(\"object\");\r
+
+      \      });\r
+
+      \r
+
+      \      pm.test(\"User object has required fields\", function () {\r
+
+      \          const user = json.data.user;\r
+
+      \          pm.expect(user).to.have.property(\"user_id\");\r
+
+      \          pm.expect(user).to.have.property(\"full_name\");\r
+
+      \          pm.expect(user).to.have.property(\"email\");\r
+
+      \          pm.expect(user).to.have.property(\"phone_number\");\r
+
+      \          pm.expect(user).to.have.property(\"address\");\r
+
+      \          pm.expect(user).to.have.property(\"city_id\");\r
+
+      \          pm.expect(user).to.have.property(\"account_status\");\r
+
+      \          pm.expect(user).to.have.property(\"is_verified\");\r
+
+      \          pm.expect(user).to.have.property(\"created_at\");\r
+
+      \          pm.expect(user).to.have.property(\"city\");\r
+
+      \      });\r
+
+      \r
+
+      \      pm.test(\"Account status is PENDING_VERIFICATION\", function () {\r
+
+      \          pm.expect(json.data.user.account_status).to.eql(\"PENDING_VERIFICATION\");\r
+
+      \      });\r
+
+      \r
+
+      \      pm.test(\"is_verified is false on registration\", function () {\r
+
+      \          pm.expect(json.data.user.is_verified).to.be.false;\r
+
+      \      });\r
+
+      \r
+
+      \      pm.test(\"Response contains accessToken\", function () {\r
+
+      \          pm.expect(json.data).to.have.property(\"accessToken\");\r
+
+      \          pm.expect(json.data.accessToken).to.be.a(\"string\").and.not.empty;\r
+
+      \      });\r
+
+      \r
+
+      \      pm.test(\"Response contains refreshToken\", function () {\r
+
+      \          pm.expect(json.data).to.have.property(\"refreshToken\");\r
+
+      \          pm.expect(json.data.refreshToken).to.be.a(\"string\").and.not.empty;\r
+
+      \      });\r
+
+      \r
+
+      \      pm.test(\"Password hash is not exposed in response\", function () {\r
+
+      \          pm.expect(json.data.user).to.not.have.property(\"password_hash\");\r
+
+      \      });\r
+
+      \r
+
+      \      pm.test(\"city object has city_id and city_name\", function () {\r
+
+      \          const city = json.data.user.city;\r
+
+      \          pm.expect(city).to.have.property(\"city_id\");\r
+
+      \          pm.expect(city).to.have.property(\"city_name\");\r
+
+      \      });\r
+
+      \r
+
+      \      if (pm.response.code === 201 && json.data?.accessToken) {\r
+
+      \          pm.environment.set(\"accessToken\", json.data.accessToken);\r
+
+      \          pm.environment.set(\"refreshToken\", json.data.refreshToken);\r
+
+      \          console.log(\"✅ accessToken and refreshToken saved to environment from register.\");\r
+
+      \r
+
+      \          // Fetch the email verification token from the dev endpoint\r
+
+      \          const email = pm.environment.get(\"testEmail\");\r
+
+      \          const baseUrl = pm.environment.get(\"baseUrl\");\r
+
+      \          pm.sendRequest(\r
+
+      \              `${baseUrl}/api/auth/dev/email-verification-token?email=${encodeURIComponent(email)}`,\r
+
+      \              function (err, res) {\r
+
+      \                  if (!err && res.code === 200) {\r
+
+      \                      const token = res.json().token;\r
+
+      \                      pm.environment.set(\"emailVerificationToken\", token);\r
+
+      \                      console.log(\"✅ emailVerificationToken saved to environment.\");\r
+
+      \                  } else {\r
+
+      \                      console.warn(\"⚠️ Could not fetch emailVerificationToken:\", err || res.text());\r
+
+      \                  }\r
+
+      \              }\r
+
+      \          );\r
+
+      \      }\r
+
+      order: 1787060946623\r\n"
+    language: text/javascript
 order: 1166017023344710
