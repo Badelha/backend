@@ -4,3 +4,6 @@ values:
     value: ''
   - key: accessToken
     value: ''
+  - key: refreshToken
+    value: ''
+color: 0

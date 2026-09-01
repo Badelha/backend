@@ -2,6 +2,9 @@ const prisma = require('../config/prisma');
 const { getPagination } = require('../utils/pagination');
 
 class ProductService {
+  /**
+   * Create a new product
+   */
   static async createProduct(data) {
     // Ensure price is properly typed for Decimal
     const productData = {
@@ -68,6 +71,9 @@ class ProductService {
     return product;
   }
 
+  /**
+   * Get all products with filters
+   */
   static async getAllProducts(filters = {}) {
     const { page = 1, limit = 20 } = filters;
     const { skip, take } = getPagination(page, limit);
@@ -79,6 +85,10 @@ class ProductService {
 
     if (filters.categoryId) {
       where.category_id = Number(filters.categoryId);
+    }
+
+    if (filters.cityId) {
+      where.city_id = Number(filters.cityId);
     }
 
     if (filters.condition) {
@@ -100,6 +110,16 @@ class ProductService {
 
     if (filters.userId) {
       where.user_id = Number(filters.userId);
+    }
+
+    if (filters.tagId) {
+      where.product_tags = {
+        some: { tag_id: Number(filters.tagId) },
+      };
+    }
+
+    if (filters.status) {
+      where.availability_status = filters.status;
     }
 
     const [products, total] = await Promise.all([
@@ -164,6 +184,9 @@ class ProductService {
     return { products: productsWithRatings, total, page, limit };
   }
 
+  /**
+   * Get product by ID
+   */
   static async getProductById(productId) {
     const product = await prisma.product.findFirst({
       where: {
@@ -192,7 +215,7 @@ class ProductService {
     });
 
     if (!product) {
-      throw new Error('Product not found');
+      throw new Error('PRODUCT_NOT_FOUND');
     }
 
     // Increment view count
@@ -218,6 +241,9 @@ class ProductService {
     };
   }
 
+  /**
+   * Update product
+   */
   static async updateProduct(productId, userId, data) {
     const product = await prisma.product.findFirst({
       where: {
@@ -227,11 +253,11 @@ class ProductService {
     });
 
     if (!product) {
-      throw new Error('Product not found');
+      throw new Error('PRODUCT_NOT_FOUND');
     }
 
     if (product.user_id !== userId) {
-      throw new Error('You can only update your own products');
+      throw new Error('NOT_OWNER');
     }
 
     const updateData = {};
@@ -267,6 +293,9 @@ class ProductService {
     return updatedProduct;
   }
 
+  /**
+   * Delete product (soft delete)
+   */
   static async deleteProduct(productId, userId) {
     const product = await prisma.product.findFirst({
       where: {
@@ -276,11 +305,11 @@ class ProductService {
     });
 
     if (!product) {
-      throw new Error('Product not found');
+      throw new Error('PRODUCT_NOT_FOUND');
     }
 
     if (product.user_id !== userId) {
-      throw new Error('You can only delete your own products');
+      throw new Error('NOT_OWNER');
     }
 
     await prisma.product.update({
@@ -294,6 +323,9 @@ class ProductService {
     return { message: 'Product deleted successfully' };
   }
 
+  /**
+   * Add image to product
+   */
   static async addProductImage(productId, userId, imageUrl) {
     const product = await prisma.product.findFirst({
       where: {
@@ -304,15 +336,15 @@ class ProductService {
     });
 
     if (!product) {
-      throw new Error('Product not found');
+      throw new Error('PRODUCT_NOT_FOUND');
     }
 
     if (product.user_id !== userId) {
-      throw new Error('You can only add images to your own products');
+      throw new Error('NOT_OWNER');
     }
 
     if (product.images.length >= 5) {
-      throw new Error('Maximum 5 images allowed per product');
+      throw new Error('MAX_IMAGES');
     }
 
     const image = await prisma.image.create({
@@ -326,6 +358,9 @@ class ProductService {
     return image;
   }
 
+  /**
+   * Delete image from product
+   */
   static async deleteProductImage(productId, imageId, userId) {
     const product = await prisma.product.findFirst({
       where: {
@@ -335,11 +370,11 @@ class ProductService {
     });
 
     if (!product) {
-      throw new Error('Product not found');
+      throw new Error('PRODUCT_NOT_FOUND');
     }
 
     if (product.user_id !== userId) {
-      throw new Error('You can only delete images from your own products');
+      throw new Error('NOT_OWNER');
     }
 
     const image = await prisma.image.findFirst({
@@ -350,7 +385,7 @@ class ProductService {
     });
 
     if (!image || image.product_id !== Number(productId)) {
-      throw new Error('Image not found');
+      throw new Error('IMAGE_NOT_FOUND');
     }
 
     await prisma.image.update({
@@ -361,6 +396,9 @@ class ProductService {
     return { message: 'Image deleted successfully' };
   }
 
+  /**
+   * Get featured products
+   */
   static async getFeaturedProducts(limit = 10) {
     const products = await prisma.product.findMany({
       where: {
@@ -389,6 +427,144 @@ class ProductService {
     });
 
     return products;
+  }
+
+  /**
+   * Feature a product (admin only)
+   */
+  static async featureProduct(productId, durationDays = 7) {
+    const product = await prisma.product.findFirst({
+      where: {
+        product_id: Number(productId),
+        deleted_at: null,
+      },
+    });
+
+    if (!product) {
+      throw new Error('PRODUCT_NOT_FOUND');
+    }
+
+    const featuredUntil = new Date();
+    featuredUntil.setDate(featuredUntil.getDate() + durationDays);
+
+    const updatedProduct = await prisma.product.update({
+      where: { product_id: Number(productId) },
+      data: {
+        is_featured: true,
+        featured_until: featuredUntil,
+      },
+    });
+
+    return updatedProduct;
+  }
+
+  /**
+   * Unfeature a product (admin only)
+   */
+  static async unfeatureProduct(productId) {
+    const product = await prisma.product.findFirst({
+      where: {
+        product_id: Number(productId),
+        deleted_at: null,
+      },
+    });
+
+    if (!product) {
+      throw new Error('PRODUCT_NOT_FOUND');
+    }
+
+    const updatedProduct = await prisma.product.update({
+      where: { product_id: Number(productId) },
+      data: {
+        is_featured: false,
+        featured_until: null,
+      },
+    });
+
+    return updatedProduct;
+  }
+
+  /**
+   * Get product statistics (admin only)
+   */
+  static async getProductStats() {
+    const [
+      totalProducts,
+      availableProducts,
+      reservedProducts,
+      exchangedProducts,
+      soldProducts,
+      removedProducts,
+      featuredProductsCount,
+      totalViews,
+      avgPrice,
+    ] = await Promise.all([
+      prisma.product.count({ where: { deleted_at: null } }),
+      prisma.product.count({ where: { deleted_at: null, availability_status: 'AVAILABLE' } }),
+      prisma.product.count({ where: { deleted_at: null, availability_status: 'RESERVED' } }),
+      prisma.product.count({ where: { deleted_at: null, availability_status: 'EXCHANGED' } }),
+      prisma.product.count({ where: { deleted_at: null, availability_status: 'SOLD' } }),
+      prisma.product.count({ where: { deleted_at: null, availability_status: 'REMOVED' } }),
+      prisma.product.count({
+        where: {
+          deleted_at: null,
+          is_featured: true,
+          featured_until: { gt: new Date() },
+        },
+      }),
+      prisma.product.aggregate({
+        where: { deleted_at: null },
+        _sum: { views_count: true },
+      }),
+      prisma.product.aggregate({
+        where: { deleted_at: null, price: { not: null } },
+        _avg: { price: true },
+      }),
+    ]);
+
+    // Get top categories
+    const topCategories = await prisma.$queryRaw`
+      SELECT 
+        c.category_name,
+        COUNT(p.product_id) as count
+      FROM categories c
+      LEFT JOIN products p ON c.category_id = p.category_id
+        AND p.deleted_at IS NULL
+      WHERE c.deleted_at IS NULL
+      GROUP BY c.category_id, c.category_name
+      ORDER BY count DESC
+      LIMIT 5
+    `;
+
+    // Get top cities
+    const topCities = await prisma.$queryRaw`
+      SELECT 
+        c.city_name,
+        COUNT(p.product_id) as count
+      FROM cities c
+      LEFT JOIN products p ON c.city_id = p.city_id
+        AND p.deleted_at IS NULL
+      WHERE p.deleted_at IS NULL
+      GROUP BY c.city_id, c.city_name
+      ORDER BY count DESC
+      LIMIT 5
+    `;
+
+    return {
+      total: {
+        products: totalProducts,
+        available: availableProducts,
+        reserved: reservedProducts,
+        exchanged: exchangedProducts,
+        sold: soldProducts,
+        removed: removedProducts,
+      },
+      featured: featuredProductsCount,
+      views: totalViews._sum.views_count || 0,
+      averagePrice: avgPrice._avg.price || 0,
+      topCategories,
+      topCities,
+    };
   }
 }
 
