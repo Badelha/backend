@@ -1,0 +1,119 @@
+$kind: http-request
+url: "{{baseUrl}}/api/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "fullName": "Test User",
+      "email": "{{testEmail}}",
+      "password": "{{testPassword}}",
+      "phoneNumber": "{{testPhone}}",
+      "address": "Ramallah, Palestine",
+      "cityId": 1
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      // Generate unique test credentials on every run to avoid conflicts
+      const ts = Date.now();
+      const email = `testuser_${ts}@example.com`;
+      const phone = `05${String(ts).slice(-8)}`;
+      const password = 'Secret@123';
+      pm.environment.set('testEmail', email);
+      pm.environment.set('testPhone', phone);
+      pm.environment.set('testPassword', password);
+      console.log('🔧 Generated test credentials:', email, phone);
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 201", function () {
+          pm.response.to.have.status(201);
+      });
+
+      pm.test("Response has success flag set to true", function () {
+          pm.expect(json.success).to.be.true;
+      });
+
+      pm.test("Response message is 'User registered successfully'", function () {
+          pm.expect(json.message).to.eql("User registered successfully");
+      });
+
+      pm.test("Response contains data object", function () {
+          pm.expect(json).to.have.property("data");
+          pm.expect(json.data).to.be.an("object");
+      });
+
+      pm.test("Response data contains user object", function () {
+          pm.expect(json.data).to.have.property("user");
+          pm.expect(json.data.user).to.be.an("object");
+      });
+
+      pm.test("User object has required fields", function () {
+          const user = json.data.user;
+          pm.expect(user).to.have.property("user_id");
+          pm.expect(user).to.have.property("full_name");
+          pm.expect(user).to.have.property("email");
+          pm.expect(user).to.have.property("phone_number");
+          pm.expect(user).to.have.property("address");
+          pm.expect(user).to.have.property("city_id");
+          pm.expect(user).to.have.property("account_status");
+          pm.expect(user).to.have.property("is_verified");
+          pm.expect(user).to.have.property("created_at");
+          pm.expect(user).to.have.property("city");
+      });
+
+      pm.test("Account status is PENDING_VERIFICATION", function () {
+          pm.expect(json.data.user.account_status).to.eql("PENDING_VERIFICATION");
+      });
+
+      pm.test("is_verified is false on registration", function () {
+          pm.expect(json.data.user.is_verified).to.be.false;
+      });
+
+      pm.test("Response contains accessToken", function () {
+          pm.expect(json.data).to.have.property("accessToken");
+          pm.expect(json.data.accessToken).to.be.a("string").and.not.empty;
+      });
+
+      pm.test("Response contains refreshToken", function () {
+          pm.expect(json.data).to.have.property("refreshToken");
+          pm.expect(json.data.refreshToken).to.be.a("string").and.not.empty;
+      });
+
+      pm.test("Password hash is not exposed in response", function () {
+          pm.expect(json.data.user).to.not.have.property("password_hash");
+      });
+
+      pm.test("city object has city_id and city_name", function () {
+          const city = json.data.user.city;
+          pm.expect(city).to.have.property("city_id");
+          pm.expect(city).to.have.property("city_name");
+      });
+
+      if (pm.response.code === 201 && json.data?.accessToken) {
+          pm.environment.set("accessToken", json.data.accessToken);
+          pm.environment.set("refreshToken", json.data.refreshToken);
+          console.log("✅ accessToken and refreshToken saved to environment from register.");
+
+          const email = pm.environment.get("testEmail");
+          const baseUrl = pm.environment.get("baseUrl");
+          pm.sendRequest(
+              `${baseUrl}/api/auth/dev/email-verification-token?email=${encodeURIComponent(email)}`,
+              function (err, res) {
+                  if (!err && res.code === 200) {
+                      const token = res.json().token;
+                      pm.environment.set("emailVerificationToken", token);
+                      console.log("✅ emailVerificationToken saved to environment.");
+                  } else {
+                      console.warn("⚠️ Could not fetch emailVerificationToken:", err || res.text());
+                  }
+              }
+          );
+      }
+    language: text/javascript
+order: 1000

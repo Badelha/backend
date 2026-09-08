@@ -6,7 +6,7 @@ const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 const morgan = require('morgan');
 
-const authRoutes = require('./src/routes/auth.routes');
+const routes = require('./src/routes');
 
 const { errorHandler } = require('./src/middlewares/error.middleware');
 
@@ -32,7 +32,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.use('/api/auth', authRoutes);
+app.use('/api', routes);
 
 app.use(errorHandler);
 

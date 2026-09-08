@@ -1,89 +1,4 @@
 $kind: http-request
-description: |-
-  ### Login User
-
-  **Endpoint**
-
-  POST /api/auth/login
-
-  **Description**
-
-  Authenticates an existing user with their email and password.
-
-  Returns a JWT access token and
-
-  sets an `HttpOnly` cookie containing the refresh token.
-
-  Also updates the user's `last_login` timestamp.
-
-  > ⚠️ The account must not be banned or suspended. Email verification is not required to log in, but account status is checked. 
-    
-
-  ---
-
-  ### Request Body
-
-  ``` json
-  {
-    "email": "john@example.com",
-    "password": "Secret@123"
-  }
-
-   ```
-
-  ---
-
-  ### Validation Rules
-
-  | Field | Rules |
-  | --- | --- |
-  | `email` | Required · Valid email format |
-  | `password` | Required · Minimum 8 characters |
-
-  ---
-
-  ### Success Response — `200 OK`
-
-  ``` json
-  {
-    "success": true,
-    "statusCode": 200,
-    "message": "Login successful",
-    "data": {
-      "user": {
-        "user_id": 1,
-        "full_name": "John Doe",
-        "email": "john@example.com",
-        "phone_number": "0599123456",
-        "address": "Ramallah, Palestine",
-        "city_id": 3,
-        "account_status": "ACTIVE",
-        "is_verified": true,
-        "last_login": "2024-01-01T00:00:00.000Z",
-        "total_transactions": 5,
-        "city": { "city_id": 3, "city_name": "Ramallah" },
-        "user_roles": [{ "role_id": 1, "role": { "role_name": "USER" } }]
-      },
-      "accessToken": "<jwt_access_token>",
-      "refreshToken": "<jwt_refresh_token>"
-    }
-  }
-
-   ```
-
-  > 🍪 A `refreshToken` cookie is also set automatically (`HttpOnly`, `SameSite=Strict`, 30-day expiry, scoped to `/api/auth/refresh-token`). 
-    
-
-  ---
-
-  ### Error Responses
-
-  | Status | Message | Cause |
-  | --- | --- | --- |
-  | `400 Bad Request` | Validation error | Missing or invalid fields |
-  | `401 Unauthorized` | Invalid email or password | Credentials do not match |
-  | `403 Forbidden` | Account is banned | User account has been banned |
-  | `403 Forbidden` | Account is suspended | User account has been suspended |
 url: "{{baseUrl}}/api/auth/login"
 method: POST
 headers:
@@ -154,4 +69,4 @@ scripts:
           console.log("✅ accessToken and refreshToken saved to environment from login.");
       }
     language: text/javascript
-order: 1787060946624
+order: 2000

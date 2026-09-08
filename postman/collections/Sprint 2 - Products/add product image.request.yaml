@@ -1,0 +1,90 @@
+$kind: http-request
+description: |-
+  ### Add Product Image
+
+  **Endpoint:** `POST /api/products/:id/images`
+
+  **Access:** 🔐 Private — requires authentication (owner only)
+
+  > Upload a single image to an existing product listing.
+  > Image must be sent as `multipart/form-data`.
+
+  ---
+
+  ### Path Parameters
+
+  | Parameter | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `id` | integer | ✅ | Product ID |
+
+  ---
+
+  ### Request Body (multipart/form-data)
+
+  | Field | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `image` | file | ✅ | Image file to upload |
+
+  ---
+
+  ### Success Response — `201 Created`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 201,
+    "message": "Image added successfully",
+    "data": {
+      "image_id": 10,
+      "image_url": "https://res.cloudinary.com/...",
+      "product_id": 1
+    }
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Message | Cause |
+  | --- | --- | --- |
+  | `401 Unauthorized` | Unauthorized | Missing or invalid token |
+  | `403 Forbidden` | Forbidden | Not the product owner |
+  | `404 Not Found` | Product not found | No product with given ID |
+url: "{{baseUrl}}/api/products/{{productId}}/images"
+method: POST
+pathVariables:
+  - key: productId
+    value: "{{productId}}"
+    description: Product ID
+body:
+  type: formdata
+  content:
+    - type: file
+      key: image
+      src:
+        - ""
+      description: Image file to upload (jpg, png, etc.)
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 201", function () {
+          pm.response.to.have.status(201);
+      });
+
+      pm.test("Response has success flag true", function () {
+          pm.expect(json.success).to.be.true;
+      });
+
+      if (pm.response.code === 201 && json.data?.image_id) {
+          pm.environment.set("imageId", json.data.image_id);
+          console.log("✅ imageId saved to environment:", json.data.image_id);
+      }
+    language: text/javascript
+order: 12000

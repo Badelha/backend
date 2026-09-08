@@ -1,0 +1,37 @@
+$kind: http-request
+url: "{{baseUrl}}/api/auth/refresh-token"
+method: POST
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has success flag set to true", function () {
+          pm.expect(json.success).to.be.true;
+      });
+
+      pm.test("Response contains data object", function () {
+          pm.expect(json).to.have.property("data");
+          pm.expect(json.data).to.be.an("object");
+      });
+
+      pm.test("Response contains new accessToken", function () {
+          pm.expect(json.data).to.have.property("accessToken");
+          pm.expect(json.data.accessToken).to.be.a("string").and.not.empty;
+      });
+
+      pm.test("Response contains new refreshToken", function () {
+          pm.expect(json.data).to.have.property("refreshToken");
+          pm.expect(json.data.refreshToken).to.be.a("string").and.not.empty;
+      });
+
+      if (pm.response.code === 200 && json.data?.accessToken) {
+          pm.environment.set("accessToken", json.data.accessToken);
+          console.log("✅ accessToken updated in environment from refresh-token.");
+      }
+    language: text/javascript
+order: 3000

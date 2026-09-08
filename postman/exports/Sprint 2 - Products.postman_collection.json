@@ -1,0 +1,1057 @@
+{
+  "info": {
+    "name": "Sprint 2 - Products",
+    "_postman_id": "9da355b8-8f49-424d-b76b-eefc49256e9c",
+    "description": "Badelha Backend – Sprint 2 - Products",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "get all products",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/products",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "products"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1",
+              "description": "Page number"
+            },
+            {
+              "key": "limit",
+              "value": "20",
+              "description": "Items per page (max 100)"
+            },
+            {
+              "key": "sort",
+              "value": "newest",
+              "description": "Sort order: newest, price, price_desc, rating",
+              "disabled": true
+            },
+            {
+              "key": "condition",
+              "value": "LIKE_NEW",
+              "description": "Filter by condition: NEW, LIKE_NEW, GOOD, FAIR, POOR",
+              "disabled": true
+            },
+            {
+              "key": "categoryId",
+              "value": "1",
+              "description": "Filter by category ID",
+              "disabled": true
+            },
+            {
+              "key": "cityId",
+              "value": "1",
+              "description": "Filter by city ID",
+              "disabled": true
+            },
+            {
+              "key": "minPrice",
+              "value": "0",
+              "description": "Minimum price filter",
+              "disabled": true
+            },
+            {
+              "key": "maxPrice",
+              "value": "500",
+              "description": "Maximum price filter",
+              "disabled": true
+            },
+            {
+              "key": "search",
+              "value": "jacket",
+              "description": "Search by title or description",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "### Get All Products\n\n**Endpoint:** `GET /api/products`\n\n**Access:** 🌐 Public — no authentication required\n\n---\n\n### Query Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `page` | integer | ❌ | Page number (default: 1) |\n| `limit` | integer | ❌ | Items per page (default: 20, max: 100) |\n| `categoryId` | integer | ❌ | Filter by category ID |\n| `cityId` | integer | ❌ | Filter by city ID |\n| `condition` | string | ❌ | `NEW`, `LIKE_NEW`, `GOOD`, `FAIR`, or `POOR` |\n| `minPrice` | number | ❌ | Minimum price filter |\n| `maxPrice` | number | ❌ | Maximum price filter |\n| `search` | string | ❌ | Search by title or description |\n| `sort` | string | ❌ | `newest`, `price`, `price_desc`, or `rating` |\n| `tagId` | integer | ❌ | Filter by tag ID |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Products retrieved successfully\",\n  \"data\": {\n    \"products\": [...],\n    \"pagination\": {\n      \"page\": 1,\n      \"limit\": 20,\n      \"total\": 100,\n      \"totalPages\": 5\n    }\n  }\n}\n```"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response has success flag true\", function () {",
+              "    pm.expect(json.success).to.be.true;",
+              "});",
+              "",
+              "pm.test(\"Response contains data object\", function () {",
+              "    pm.expect(json).to.have.property(\"data\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "search products",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/products/search",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "products",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "jacket",
+              "description": "Search keyword (min 2 characters)"
+            },
+            {
+              "key": "categoryId",
+              "value": "1",
+              "description": "Filter by category ID",
+              "disabled": true
+            },
+            {
+              "key": "cityId",
+              "value": "1",
+              "description": "Filter by city ID",
+              "disabled": true
+            },
+            {
+              "key": "condition",
+              "value": "LIKE_NEW",
+              "description": "Filter by condition: NEW, LIKE_NEW, GOOD, FAIR, POOR",
+              "disabled": true
+            },
+            {
+              "key": "minPrice",
+              "value": "0",
+              "description": "",
+              "disabled": true
+            },
+            {
+              "key": "maxPrice",
+              "value": "500",
+              "description": "",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "### Search Products\n\n**Endpoint:** `GET /api/products/search`\n\n**Access:** 🌐 Public — no authentication required\n\n---\n\n### Query Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `q` | string | ✅ | Search keyword (minimum 2 characters) |\n| `categoryId` | integer | ❌ | Filter by category ID |\n| `cityId` | integer | ❌ | Filter by city ID |\n| `condition` | string | ❌ | `NEW`, `LIKE_NEW`, `GOOD`, `FAIR`, or `POOR` |\n| `minPrice` | number | ❌ | Minimum price filter |\n| `maxPrice` | number | ❌ | Maximum price filter |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Products retrieved successfully\",\n  \"data\": { \"products\": [...], \"pagination\": {...} }\n}\n```"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response has success flag true\", function () {",
+              "    pm.expect(json.success).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "get featured products",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/products/featured",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "products",
+            "featured"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "10",
+              "description": "Number of featured products to return",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "### Get Featured Products\n\n**Endpoint:** `GET /api/products/featured`\n\n**Access:** 🌐 Public — no authentication required\n\n---\n\n### Query Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `limit` | integer | ❌ | Number of products to return (default: 10) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Featured products retrieved successfully\",\n  \"data\": [...]\n}\n```"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response has success flag true\", function () {",
+              "    pm.expect(json.success).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "get products by category",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/products/category/{{categoryId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "products",
+            "category",
+            "{{categoryId}}"
+          ],
+          "variable": [
+            {
+              "key": "categoryId",
+              "value": "{{categoryId}}",
+              "description": "Category ID"
+            }
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1",
+              "description": "",
+              "disabled": true
+            },
+            {
+              "key": "limit",
+              "value": "20",
+              "description": "",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "### Get Products by Category\n\n**Endpoint:** `GET /api/products/category/:categoryId`\n\n**Access:** 🌐 Public — no authentication required\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `categoryId` | integer | ✅ | Category ID (positive integer) |\n\n---\n\n### Query Parameters\n\nSame filters as **Get All Products**: `page`, `limit`, `condition`, `minPrice`, `maxPrice`, `sort`\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Products retrieved successfully\",\n  \"data\": { \"products\": [...], \"pagination\": {...} }\n}\n```"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response has success flag true\", function () {",
+              "    pm.expect(json.success).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "get products by city",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/products/city/{{cityId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "products",
+            "city",
+            "{{cityId}}"
+          ],
+          "variable": [
+            {
+              "key": "cityId",
+              "value": "{{cityId}}",
+              "description": "City ID"
+            }
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1",
+              "description": "",
+              "disabled": true
+            },
+            {
+              "key": "limit",
+              "value": "20",
+              "description": "",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "### Get Products by City\n\n**Endpoint:** `GET /api/products/city/:cityId`\n\n**Access:** 🌐 Public — no authentication required\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `cityId` | integer | ✅ | City ID (positive integer) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Products retrieved successfully\",\n  \"data\": { \"products\": [...], \"pagination\": {...} }\n}\n```"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "get products by tag",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/products/tag/{{tagId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "products",
+            "tag",
+            "{{tagId}}"
+          ],
+          "variable": [
+            {
+              "key": "tagId",
+              "value": "{{tagId}}",
+              "description": "Tag ID"
+            }
+          ]
+        },
+        "description": "### Get Products by Tag\n\n**Endpoint:** `GET /api/products/tag/:tagId`\n\n**Access:** 🌐 Public — no authentication required\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `tagId` | integer | ✅ | Tag ID (positive integer) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Products retrieved successfully\",\n  \"data\": { \"products\": [...], \"pagination\": {...} }\n}\n```"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "get product by id",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/products/{{productId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "products",
+            "{{productId}}"
+          ],
+          "variable": [
+            {
+              "key": "productId",
+              "value": "{{productId}}",
+              "description": "Product ID (set automatically by Create Product)"
+            }
+          ]
+        },
+        "description": "### Get Product by ID\n\n**Endpoint:** `GET /api/products/:id`\n\n**Access:** 🌐 Public — no authentication required\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Product ID (positive integer) |\n\n> 💡 `{{productId}}` is automatically set after running **Create Product**.\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Product retrieved successfully\",\n  \"data\": {\n    \"product_id\": 1,\n    \"title\": \"Vintage Leather Jacket\",\n    \"description\": \"...\",\n    \"condition\": \"LIKE_NEW\",\n    \"price\": 150,\n    \"status\": \"ACTIVE\",\n    \"is_featured\": false,\n    \"category\": {...},\n    \"city\": {...},\n    \"images\": [...],\n    \"tags\": [...]\n  }\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Message | Cause |\n| --- | --- | --- |\n| `400 Bad Request` | Validation error | Invalid product ID format |\n| `404 Not Found` | Product not found | No product with given ID |"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response has success flag true\", function () {",
+              "    pm.expect(json.success).to.be.true;",
+              "});",
+              "",
+              "pm.test(\"Product has required fields\", function () {",
+              "    const p = json.data;",
+              "    pm.expect(p).to.have.property(\"product_id\");",
+              "    pm.expect(p).to.have.property(\"title\");",
+              "    pm.expect(p).to.have.property(\"condition\");",
+              "    pm.expect(p).to.have.property(\"status\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "get my listings",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/products/my/listings",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "products",
+            "my",
+            "listings"
+          ]
+        },
+        "description": "### Get My Product Listings\n\n**Endpoint:** `GET /api/products/my/listings`\n\n**Access:** 🔐 Private — requires authentication\n\n> Include `Authorization: Bearer {{accessToken}}` in the header.\n> Run the **Login** request first to get a valid token.\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Products retrieved successfully\",\n  \"data\": [\n    {\n      \"product_id\": 1,\n      \"title\": \"Vintage Leather Jacket\",\n      \"status\": \"ACTIVE\",\n      ...\n    }\n  ]\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Message | Cause |\n| --- | --- | --- |\n| `401 Unauthorized` | Unauthorized | Missing or invalid access token |",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response has success flag true\", function () {",
+              "    pm.expect(json.success).to.be.true;",
+              "});",
+              "",
+              "pm.test(\"Response data is an array\", function () {",
+              "    pm.expect(json.data).to.be.an(\"array\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "create product",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/products",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "products"
+          ]
+        },
+        "description": "### Create Product\n\n**Endpoint**\n\n`POST /api/products`\n\n**Description**\n\nCreates a new product listing for the authenticated user.\nThe user must be logged in and provide a valid Bearer token.\nImages are uploaded as multipart/form-data (max 5 files).\n\n> 🔐 Requires authentication — include `Authorization: Bearer {{accessToken}}`\n\n---\n\n### Request Body (multipart/form-data)\n\n| Field | Type | Required | Rules |\n| --- | --- | --- | --- |\n| `title` | string | ✅ Yes | 5–200 characters |\n| `description` | string | ✅ Yes | Minimum 10 characters |\n| `categoryId` | integer | ✅ Yes | Positive integer |\n| `cityId` | integer | ✅ Yes | Positive integer |\n| `condition` | string | ✅ Yes | `NEW`, `LIKE_NEW`, `GOOD`, `FAIR`, or `POOR` |\n| `price` | number | ❌ Optional | Positive number |\n| `exchangePreference` | string | ❌ Optional | `EXCHANGE_ONLY`, `PURCHASE_ONLY`, or `BOTH` |\n| `tags` | array of integers | ❌ Optional | Array of positive tag IDs |\n| `additionalInfo` | string | ❌ Optional | Max 500 characters |\n| `images` | file(s) | ❌ Optional | Up to 5 image files |\n\n---\n\n### Example Request Body\n\n```\ntitle        = Vintage Leather Jacket\ndescription  = Genuine leather jacket in great condition, barely worn\ncategoryId   = 1\ncityId       = 1\ncondition    = LIKE_NEW\nprice        = 150\nexchangePreference = BOTH\nadditionalInfo = Open to exchange for similar items\n```\n\n---\n\n### Success Response — `201 Created`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"message\": \"Product created successfully\",\n  \"data\": {\n    \"product_id\": 42,\n    \"title\": \"Vintage Leather Jacket\",\n    \"description\": \"Genuine leather jacket in great condition, barely worn\",\n    \"condition\": \"LIKE_NEW\",\n    \"price\": 150,\n    \"exchange_preference\": \"BOTH\",\n    \"additional_info\": \"Open to exchange for similar items\",\n    \"status\": \"ACTIVE\",\n    \"is_featured\": false,\n    \"created_at\": \"2024-01-01T00:00:00.000Z\",\n    \"category\": { \"category_id\": 1, \"category_name\": \"Clothing\" },\n    \"city\": { \"city_id\": 1, \"city_name\": \"Gaza\" },\n    \"images\": [],\n    \"tags\": []\n  }\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Message | Cause |\n| --- | --- | --- |\n| `400 Bad Request` | Validation error | Missing or invalid required fields |\n| `401 Unauthorized` | Unauthorized | Missing or invalid access token |\n| `404 Not Found` | Category not found | Provided `categoryId` does not exist |\n| `404 Not Found` | City not found | Provided `cityId` does not exist |",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "title",
+              "type": "text",
+              "value": "Vintage Leather Jacket",
+              "description": "Product title (5–200 characters)"
+            },
+            {
+              "key": "description",
+              "type": "text",
+              "value": "Genuine leather jacket in great condition, barely worn",
+              "description": "Product description (minimum 10 characters)"
+            },
+            {
+              "key": "categoryId",
+              "type": "text",
+              "value": "1",
+              "description": "Category ID (positive integer)"
+            },
+            {
+              "key": "cityId",
+              "type": "text",
+              "value": "1",
+              "description": "City ID (positive integer)"
+            },
+            {
+              "key": "condition",
+              "type": "text",
+              "value": "LIKE_NEW",
+              "description": "Condition: NEW, LIKE_NEW, GOOD, FAIR, or POOR"
+            },
+            {
+              "key": "price",
+              "type": "text",
+              "value": "150",
+              "description": "Price (optional, positive number)"
+            },
+            {
+              "key": "exchangePreference",
+              "type": "text",
+              "value": "BOTH",
+              "description": "Exchange preference: EXCHANGE_ONLY, PURCHASE_ONLY, or BOTH"
+            },
+            {
+              "key": "additionalInfo",
+              "type": "text",
+              "value": "Open to exchange for similar items",
+              "description": "Additional info (optional, max 500 characters)"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 201 Created\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test(\"Response has success flag set to true\", function () {",
+              "    pm.expect(json.success).to.be.true;",
+              "});",
+              "",
+              "pm.test(\"Response contains data object\", function () {",
+              "    pm.expect(json).to.have.property(\"data\");",
+              "    pm.expect(json.data).to.be.an(\"object\");",
+              "});",
+              "",
+              "pm.test(\"Product has required fields\", function () {",
+              "    const product = json.data;",
+              "    pm.expect(product).to.have.property(\"product_id\");",
+              "    pm.expect(product).to.have.property(\"title\");",
+              "    pm.expect(product).to.have.property(\"description\");",
+              "    pm.expect(product).to.have.property(\"condition\");",
+              "    pm.expect(product).to.have.property(\"status\");",
+              "});",
+              "",
+              "pm.test(\"Product title matches submitted value\", function () {",
+              "    pm.expect(json.data.title).to.eql(\"Vintage Leather Jacket\");",
+              "});",
+              "",
+              "pm.test(\"Product condition is valid\", function () {",
+              "    const validConditions = [\"NEW\", \"LIKE_NEW\", \"GOOD\", \"FAIR\", \"POOR\"];",
+              "    pm.expect(validConditions).to.include(json.data.condition);",
+              "});",
+              "",
+              "pm.test(\"Product status is ACTIVE\", function () {",
+              "    pm.expect(json.data.status).to.eql(\"ACTIVE\");",
+              "});",
+              "",
+              "pm.test(\"Response message is correct\", function () {",
+              "    pm.expect(json.message).to.eql(\"Product created successfully\");",
+              "});",
+              "",
+              "if (pm.response.code === 201 && json.data?.product_id) {",
+              "    pm.environment.set(\"productId\", json.data.product_id);",
+              "    console.log(\"✅ productId saved to environment:\", json.data.product_id);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "update product",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/products/{{productId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "products",
+            "{{productId}}"
+          ],
+          "variable": [
+            {
+              "key": "productId",
+              "value": "{{productId}}",
+              "description": "Product ID (set by Create Product)"
+            }
+          ]
+        },
+        "description": "### Update Product\n\n**Endpoint:** `PUT /api/products/:id`\n\n**Access:** 🔐 Private — requires authentication (owner only)\n\n> Only the product owner can update their listing.\n> Include `Authorization: Bearer {{accessToken}}` in the header.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Product ID |\n\n---\n\n### Request Body (JSON) — all fields optional\n\n| Field | Type | Rules |\n| --- | --- | --- |\n| `title` | string | 5–200 characters |\n| `description` | string | Minimum 10 characters |\n| `categoryId` | integer | Positive integer |\n| `cityId` | integer | Positive integer |\n| `condition` | string | `NEW`, `LIKE_NEW`, `GOOD`, `FAIR`, or `POOR` |\n| `price` | number | Positive number |\n| `exchangePreference` | string | `EXCHANGE_ONLY`, `PURCHASE_ONLY`, or `BOTH` |\n| `additionalInfo` | string | Max 500 characters |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Product updated successfully\",\n  \"data\": { \"product_id\": 1, \"title\": \"Updated Title\", ... }\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Message | Cause |\n| --- | --- | --- |\n| `400 Bad Request` | Validation error | Invalid field values |\n| `401 Unauthorized` | Unauthorized | Missing or invalid token |\n| `403 Forbidden` | Forbidden | Not the product owner |\n| `404 Not Found` | Product not found | No product with given ID |",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Vintage Leather Jacket - Updated\",\n  \"description\": \"Genuine leather jacket in excellent condition, lightly used\",\n  \"condition\": \"GOOD\",\n  \"price\": 120,\n  \"exchangePreference\": \"BOTH\",\n  \"additionalInfo\": \"Willing to negotiate\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response has success flag true\", function () {",
+              "    pm.expect(json.success).to.be.true;",
+              "});",
+              "",
+              "pm.test(\"Response message is correct\", function () {",
+              "    pm.expect(json.message).to.eql(\"Product updated successfully\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "delete product",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/products/{{productId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "products",
+            "{{productId}}"
+          ],
+          "variable": [
+            {
+              "key": "productId",
+              "value": "{{productId}}",
+              "description": "Product ID (set by Create Product)"
+            }
+          ]
+        },
+        "description": "### Delete Product\n\n**Endpoint:** `DELETE /api/products/:id`\n\n**Access:** 🔐 Private — requires authentication (owner only)\n\n> Performs a **soft delete** — the product is marked as deleted but not permanently removed.\n> Only the product owner can delete their listing.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Product ID |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Product deleted successfully\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Message | Cause |\n| --- | --- | --- |\n| `401 Unauthorized` | Unauthorized | Missing or invalid token |\n| `403 Forbidden` | Forbidden | Not the product owner |\n| `404 Not Found` | Product not found | No product with given ID |",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response has success flag true\", function () {",
+              "    pm.expect(json.success).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "add product image",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/products/{{productId}}/images",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "products",
+            "{{productId}}",
+            "images"
+          ],
+          "variable": [
+            {
+              "key": "productId",
+              "value": "{{productId}}",
+              "description": "Product ID"
+            }
+          ]
+        },
+        "description": "### Add Product Image\n\n**Endpoint:** `POST /api/products/:id/images`\n\n**Access:** 🔐 Private — requires authentication (owner only)\n\n> Upload a single image to an existing product listing.\n> Image must be sent as `multipart/form-data`.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Product ID |\n\n---\n\n### Request Body (multipart/form-data)\n\n| Field | Type | Required | Description |\n| --- | --- | --- | --- |\n| `image` | file | ✅ | Image file to upload |\n\n---\n\n### Success Response — `201 Created`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"message\": \"Image added successfully\",\n  \"data\": {\n    \"image_id\": 10,\n    \"image_url\": \"https://res.cloudinary.com/...\",\n    \"product_id\": 1\n  }\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Message | Cause |\n| --- | --- | --- |\n| `401 Unauthorized` | Unauthorized | Missing or invalid token |\n| `403 Forbidden` | Forbidden | Not the product owner |\n| `404 Not Found` | Product not found | No product with given ID |",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "image",
+              "type": "file",
+              "src": "",
+              "description": "Image file to upload (jpg, png, etc.)"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 201\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test(\"Response has success flag true\", function () {",
+              "    pm.expect(json.success).to.be.true;",
+              "});",
+              "",
+              "if (pm.response.code === 201 && json.data?.image_id) {",
+              "    pm.environment.set(\"imageId\", json.data.image_id);",
+              "    console.log(\"✅ imageId saved to environment:\", json.data.image_id);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "delete product image",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/products/{{productId}}/images/{{imageId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "products",
+            "{{productId}}",
+            "images",
+            "{{imageId}}"
+          ],
+          "variable": [
+            {
+              "key": "productId",
+              "value": "{{productId}}",
+              "description": "Product ID"
+            },
+            {
+              "key": "imageId",
+              "value": "{{imageId}}",
+              "description": "Image ID (set by Add Product Image)"
+            }
+          ]
+        },
+        "description": "### Delete Product Image\n\n**Endpoint:** `DELETE /api/products/:id/images/:imageId`\n\n**Access:** 🔐 Private — requires authentication (owner only)\n\n> Permanently removes an image from a product listing.\n> `{{imageId}}` is saved automatically by the **Add Product Image** request.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Product ID |\n| `imageId` | integer | ✅ | Image ID to delete |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Image deleted successfully\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Message | Cause |\n| --- | --- | --- |\n| `401 Unauthorized` | Unauthorized | Missing or invalid token |\n| `403 Forbidden` | Forbidden | Not the product owner |\n| `404 Not Found` | Image not found | No image with given ID on this product |",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response has success flag true\", function () {",
+              "    pm.expect(json.success).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "get product stats",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/products/stats",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "products",
+            "stats"
+          ]
+        },
+        "description": "### Get Product Statistics\n\n**Endpoint:** `GET /api/products/stats`\n\n**Access:** 🔐 Admin only — requires authentication with Admin role\n\n> Returns aggregate statistics about all products in the system.\n> Requires an Admin-role account. Use an admin `{{accessToken}}`.\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Product statistics retrieved successfully\",\n  \"data\": {\n    \"total\": 500,\n    \"active\": 420,\n    \"featured\": 15,\n    \"byCondition\": { \"NEW\": 50, \"LIKE_NEW\": 180, ... },\n    \"byCategory\": [...]\n  }\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Message | Cause |\n| --- | --- | --- |\n| `401 Unauthorized` | Unauthorized | Missing or invalid token |\n| `403 Forbidden` | Forbidden | Authenticated user is not an Admin |",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response has success flag true\", function () {",
+              "    pm.expect(json.success).to.be.true;",
+              "});",
+              "",
+              "pm.test(\"Response contains stats data\", function () {",
+              "    pm.expect(json.data).to.be.an(\"object\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "feature product",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/products/{{productId}}/feature",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "products",
+            "{{productId}}",
+            "feature"
+          ],
+          "variable": [
+            {
+              "key": "productId",
+              "value": "{{productId}}",
+              "description": "Product ID"
+            }
+          ]
+        },
+        "description": "### Feature a Product\n\n**Endpoint:** `PATCH /api/products/:id/feature`\n\n**Access:** 🔐 Admin only — requires authentication with Admin role\n\n> Marks a product as featured for a specified number of days.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Product ID |\n\n---\n\n### Request Body (JSON)\n\n| Field | Type | Required | Description |\n| --- | --- | --- | --- |\n| `durationDays` | integer | ❌ | Days to feature the product (default: 7) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Product featured successfully\",\n  \"data\": { \"product_id\": 1, \"is_featured\": true, \"featured_until\": \"...\" }\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Message | Cause |\n| --- | --- | --- |\n| `401 Unauthorized` | Unauthorized | Missing or invalid token |\n| `403 Forbidden` | Forbidden | Authenticated user is not an Admin |\n| `404 Not Found` | Product not found | No product with given ID |",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"durationDays\": 7\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response has success flag true\", function () {",
+              "    pm.expect(json.success).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "unfeature product",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/products/{{productId}}/unfeature",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "products",
+            "{{productId}}",
+            "unfeature"
+          ],
+          "variable": [
+            {
+              "key": "productId",
+              "value": "{{productId}}",
+              "description": "Product ID"
+            }
+          ]
+        },
+        "description": "### Unfeature a Product\n\n**Endpoint:** `PATCH /api/products/:id/unfeature`\n\n**Access:** 🔐 Admin only — requires authentication with Admin role\n\n> Removes the featured status from a product.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Product ID |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Product unfeatured successfully\",\n  \"data\": { \"product_id\": 1, \"is_featured\": false }\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Message | Cause |\n| --- | --- | --- |\n| `401 Unauthorized` | Unauthorized | Missing or invalid token |\n| `403 Forbidden` | Forbidden | Authenticated user is not an Admin |\n| `404 Not Found` | Product not found | No product with given ID |",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response has success flag true\", function () {",
+              "    pm.expect(json.success).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": []
+}

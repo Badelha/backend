@@ -1,0 +1,72 @@
+$kind: http-request
+name: search products
+order: 200
+description: |-
+  ### Search Products
+
+  **Endpoint:** `GET /api/products/search`
+
+  **Access:** 🌐 Public — no authentication required
+
+  ---
+
+  ### Query Parameters
+
+  | Parameter | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `q` | string | ✅ | Search keyword (minimum 2 characters) |
+  | `categoryId` | integer | ❌ | Filter by category ID |
+  | `cityId` | integer | ❌ | Filter by city ID |
+  | `condition` | string | ❌ | `NEW`, `LIKE_NEW`, `GOOD`, `FAIR`, or `POOR` |
+  | `minPrice` | number | ❌ | Minimum price filter |
+  | `maxPrice` | number | ❌ | Maximum price filter |
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Products retrieved successfully",
+    "data": { "products": [...], "pagination": {...} }
+  }
+  ```
+url: '{{baseUrl}}/api/products/search'
+method: GET
+queryParams:
+  - key: q
+    value: jacket
+    description: Search keyword (min 2 characters)
+  - key: categoryId
+    value: '1'
+    description: Filter by category ID
+    disabled: true
+  - key: cityId
+    value: '1'
+    description: Filter by city ID
+    disabled: true
+  - key: condition
+    value: LIKE_NEW
+    description: 'Filter by condition: NEW, LIKE_NEW, GOOD, FAIR, POOR'
+    disabled: true
+  - key: minPrice
+    value: '0'
+    disabled: true
+  - key: maxPrice
+    value: '500'
+    disabled: true
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has success flag true", function () {
+          pm.expect(json.success).to.be.true;
+      });
