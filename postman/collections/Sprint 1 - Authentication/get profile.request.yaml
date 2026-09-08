@@ -1,0 +1,52 @@
+$kind: http-request
+url: "{{baseUrl}}/api/auth/profile"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has success flag set to true", function () {
+          pm.expect(json.success).to.be.true;
+      });
+
+      pm.test("Response contains data object", function () {
+          pm.expect(json).to.have.property("data");
+          pm.expect(json.data).to.be.an("object");
+      });
+
+      pm.test("Profile has required fields", function () {
+          const data = json.data;
+          pm.expect(data).to.have.property("user_id");
+          pm.expect(data).to.have.property("full_name");
+          pm.expect(data).to.have.property("email");
+          pm.expect(data).to.have.property("phone_number");
+          pm.expect(data).to.have.property("address");
+          pm.expect(data).to.have.property("account_status");
+          pm.expect(data).to.have.property("is_verified");
+          pm.expect(data).to.have.property("city");
+          pm.expect(data).to.have.property("user_roles");
+          pm.expect(data).to.have.property("average_rating");
+      });
+
+      pm.test("Password hash is not exposed in response", function () {
+          pm.expect(json.data).to.not.have.property("password_hash");
+      });
+
+      pm.test("user_roles is an array", function () {
+          pm.expect(json.data.user_roles).to.be.an("array");
+      });
+
+      pm.test("average_rating is a number", function () {
+          pm.expect(json.data.average_rating).to.be.a("number");
+      });
+    language: text/javascript
+order: 7000

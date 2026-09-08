@@ -8,6 +8,15 @@ const productRoutes = require('./product.routes');
 const categoryRoutes = require('./category.routes');
 
 // ============================================================
+// REQUEST LOGGER (TEMPORARY FOR DEBUGGING)
+// ============================================================
+
+router.use((req, res, next) => {
+  console.log(`API HIT: ${req.method} ${req.originalUrl}`);
+  next();
+});
+
+// ============================================================
 // HEALTH CHECK
 // ============================================================
 
@@ -32,7 +41,7 @@ router.use('/categories', categoryRoutes);
 // 404 HANDLER FOR API
 // ============================================================
 
-router.use('*', (req, res) => {
+router.use((req, res) => {
   res.status(404).json({
     success: false,
     statusCode: 404,

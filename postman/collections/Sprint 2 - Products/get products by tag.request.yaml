@@ -1,0 +1,44 @@
+$kind: http-request
+description: |-
+  ### Get Products by Tag
+
+  **Endpoint:** `GET /api/products/tag/:tagId`
+
+  **Access:** 🌐 Public — no authentication required
+
+  ---
+
+  ### Path Parameters
+
+  | Parameter | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `tagId` | integer | ✅ | Tag ID (positive integer) |
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Products retrieved successfully",
+    "data": { "products": [...], "pagination": {...} }
+  }
+  ```
+url: "{{baseUrl}}/api/products/tag/{{tagId}}"
+method: GET
+pathVariables:
+  - key: tagId
+    value: "{{tagId}}"
+    description: Tag ID
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+    language: text/javascript
+order: 6000

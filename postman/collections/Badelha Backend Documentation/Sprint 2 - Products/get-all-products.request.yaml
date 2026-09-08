@@ -1,0 +1,101 @@
+$kind: http-request
+name: get all products
+order: 100
+description: |-
+  ### Get All Products
+
+  **Endpoint:** `GET /api/products`
+
+  **Access:** 🌐 Public — no authentication required
+
+  ---
+
+  ### Query Parameters
+
+  | Parameter | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `page` | integer | ❌ | Page number (default: 1) |
+  | `limit` | integer | ❌ | Items per page (default: 20, max: 100) |
+  | `categoryId` | integer | ❌ | Filter by category ID |
+  | `cityId` | integer | ❌ | Filter by city ID |
+  | `condition` | string | ❌ | `NEW`, `LIKE_NEW`, `GOOD`, `FAIR`, or `POOR` |
+  | `minPrice` | number | ❌ | Minimum price filter |
+  | `maxPrice` | number | ❌ | Maximum price filter |
+  | `search` | string | ❌ | Search by title or description |
+  | `sort` | string | ❌ | `newest`, `price`, `price_desc`, or `rating` |
+  | `tagId` | integer | ❌ | Filter by tag ID |
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Products retrieved successfully",
+    "data": {
+      "products": [...],
+      "pagination": {
+        "page": 1,
+        "limit": 20,
+        "total": 100,
+        "totalPages": 5
+      }
+    }
+  }
+  ```
+url: '{{baseUrl}}/api/products'
+method: GET
+queryParams:
+  - key: page
+    value: '1'
+    description: Page number
+  - key: limit
+    value: '20'
+    description: Items per page (max 100)
+  - key: sort
+    value: newest
+    description: 'Sort order: newest, price, price_desc, rating'
+    disabled: true
+  - key: condition
+    value: LIKE_NEW
+    description: 'Filter by condition: NEW, LIKE_NEW, GOOD, FAIR, POOR'
+    disabled: true
+  - key: categoryId
+    value: '1'
+    description: Filter by category ID
+    disabled: true
+  - key: cityId
+    value: '1'
+    description: Filter by city ID
+    disabled: true
+  - key: minPrice
+    value: '0'
+    description: Minimum price filter
+    disabled: true
+  - key: maxPrice
+    value: '500'
+    description: Maximum price filter
+    disabled: true
+  - key: search
+    value: jacket
+    description: Search by title or description
+    disabled: true
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has success flag true", function () {
+          pm.expect(json.success).to.be.true;
+      });
+
+      pm.test("Response contains data object", function () {
+          pm.expect(json).to.have.property("data");
+      });
