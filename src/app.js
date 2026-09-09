@@ -7,10 +7,10 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 
 // Import routes
-const routes = require('./src/routes');
+const routes = require('./routes');
 
 // Import middleware
-const { errorHandler } = require('./src/middlewares/error.middleware');
+const { errorHandler } = require('./middlewares/error.middleware');
 
 const app = express();
 

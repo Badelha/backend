@@ -1,0 +1,12 @@
+const router = require('express').Router();
+const { param } = require('express-validator');
+const { authenticate } = require('../middlewares/auth.middleware');
+const { validate } = require('../middlewares/validation.middleware');
+const controller = require('../controllers/transaction.controller');
+const idValidator = [param('id').isInt({ min: 1 }).withMessage('Notification ID must be a positive integer').toInt()];
+router.use(authenticate);
+router.get('/', controller.listNotifications);
+router.get('/unread-count', controller.unreadCount);
+router.patch('/read-all', controller.markAllNotificationsRead);
+router.patch('/:id/read', idValidator, validate, controller.markNotificationRead);
+module.exports = router;
