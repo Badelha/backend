@@ -1,0 +1,14 @@
+const router = require('express').Router();
+const { authenticate } = require('../middlewares/auth.middleware');
+const { validate } = require('../middlewares/validation.middleware');
+const controller = require('../controllers/transaction.controller');
+const v = require('../validators/purchase.validator');
+router.use(authenticate);
+router.get('/', v.getPurchaseRequestsValidator, validate, controller.listPurchases);
+router.post('/', v.createPurchaseValidator, validate, controller.createPurchase);
+router.get('/:id', v.getPurchaseRequestByIdValidator, validate, controller.getPurchase);
+router.patch('/:id/accept', v.acceptPurchaseValidator, validate, controller.acceptPurchase);
+router.patch('/:id/reject', v.rejectPurchaseValidator, validate, controller.rejectPurchase);
+router.patch('/:id/complete', v.completePurchaseValidator, validate, controller.completePurchase);
+router.patch('/:id/cancel', v.cancelPurchaseValidator, validate, controller.cancelPurchase);
+module.exports = router;

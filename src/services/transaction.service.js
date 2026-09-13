@@ -137,7 +137,7 @@ class TransactionService {
 
     const where = {
       deleted_at: null,
-      changer_id: userId,
+      changed_by: userId,
     };
 
     if (filters.transactionType) {

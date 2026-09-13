@@ -1,0 +1,14 @@
+const router = require('express').Router();
+const { authenticate } = require('../middlewares/auth.middleware');
+const { validate } = require('../middlewares/validation.middleware');
+const controller = require('../controllers/transaction.controller');
+const v = require('../validators/exchange.validator');
+router.use(authenticate);
+router.get('/', v.getExchangeRequestsValidator, validate, controller.listExchanges);
+router.post('/', v.createExchangeValidator, validate, controller.createExchange);
+router.get('/:id', v.getExchangeRequestByIdValidator, validate, controller.getExchange);
+router.patch('/:id/accept', v.acceptExchangeValidator, validate, controller.acceptExchange);
+router.patch('/:id/reject', v.rejectExchangeValidator, validate, controller.rejectExchange);
+router.patch('/:id/complete', v.completeExchangeValidator, validate, controller.completeExchange);
+router.patch('/:id/cancel', v.cancelExchangeValidator, validate, controller.cancelExchange);
+module.exports = router;
