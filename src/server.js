@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-const app = require('./app');
+const app = require('./src/app');
 const config = require('./src/config/env');
 const prisma = require('./src/config/prisma');
 
