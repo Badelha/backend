@@ -9,6 +9,6 @@ cloudResources:
   globals:
     ../postman/globals/workspace.globals.yaml: e93b1792-96f9-4425-871a-949dc295d9c9
   collections:
-    ../postman/collections/Sprint 2 - Categories: 1954fba1-00da-4bfc-8861-31be132f35e7
-    ../postman/collections/Sprint 2 - Products: ae503975-2e7a-420f-bed2-9a75c493d76d
-    ../postman/collections/Sprint 1 - Authentication: f0cf351c-aaec-4f79-a735-00124561fa6e
+    ../postman/collections/Sprint 1 - Authentication: efb88f27-0eee-4a31-ac09-29f186205f6a
+    ../postman/collections/Sprint 2 - Categories: a9354fe1-8703-459a-aedd-3ea798611bac
+    ../postman/collections/Sprint 3 - Products: ae503975-2e7a-420f-bed2-9a75c493d76d

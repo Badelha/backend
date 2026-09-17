@@ -1,4 +1,76 @@
 $kind: http-request
+description: |-
+  ### Get User Profile
+
+  **Endpoint**
+
+  GET /api/auth/profile
+
+  **Description**
+
+  Returns the full profile of the currently authenticated user, including personal details, city, assigned roles, and their average rating on the platform.
+
+  > 🔒 This is a **protected route**. A valid JWT access token must be provided in the `Authorization` header as a Bearer token.
+
+  ---
+
+  ### Authentication
+
+  | Type | Header | Format |
+  |---|---|---|
+  | Bearer Token | `Authorization` | `Bearer <jwt_access_token>` |
+
+  Obtain the access token from `/api/auth/login` or `/api/auth/register`.
+
+  > ⚠️ The token is verified against the JWT secret. Expired or invalid tokens return `401`. Banned or suspended accounts return `403`.
+
+  ---
+
+  ### Request Body
+
+  No request body required.
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Profile retrieved successfully",
+    "data": {
+      "user_id": 1,
+      "full_name": "John Doe",
+      "email": "john@example.com",
+      "phone_number": "0599123456",
+      "address": "Ramallah, Palestine",
+      "city_id": 3,
+      "account_status": "ACTIVE",
+      "is_verified": true,
+      "created_at": "2024-01-01T00:00:00.000Z",
+      "last_login": "2024-06-01T10:00:00.000Z",
+      "total_transactions": 12,
+      "city": { "city_id": 3, "city_name": "Ramallah" },
+      "user_roles": [{ "role_id": 1, "role": { "role_name": "USER" } }],
+      "average_rating": 4.5
+    }
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Message | Cause |
+  |---|---|---|
+  | `401 Unauthorized` | Authentication required | `Authorization` header is missing |
+  | `401 Unauthorized` | Invalid token | Token is malformed or invalid |
+  | `401 Unauthorized` | Token expired | JWT access token has expired — use `/api/auth/refresh-token` |
+  | `403 Forbidden` | Account is banned | User account has been banned |
+  | `403 Forbidden` | Account is suspended | User account has been suspended |
+  | `404 Not Found` | User not found | Authenticated user no longer exists in the database |
+  | `500 Internal Server Error` | Internal server error | Unexpected server-side failure |
 url: "{{baseUrl}}/api/auth/profile"
 method: GET
 auth:
