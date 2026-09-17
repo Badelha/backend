@@ -1,0 +1,14 @@
+name: Production Environment
+values:
+  - key: baseUrl
+    value: 'https://badelha.onrender.com/'
+  - key: testEmail
+    value: ''
+  - key: testPhone
+    value: ''
+  - key: testPassword
+    value: ''
+  - key: accessToken
+    value: ''
+  - key: refreshToken
+    value: ''

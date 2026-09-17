@@ -150,7 +150,8 @@
             "auth",
             "register"
           ]
-        }
+        },
+        "description": "### Register User\n\n**Endpoint**\n\nPOST /api/auth/register\n\n**Description**\n\nRegisters a new user account in the Badelha platform. On success, a new user record is created with `account_status` set to `PENDING_VERIFICATION` and `is_verified` set to `false`. A JWT access token and refresh token are returned immediately so the user can interact with the API before verifying their email.\n\nA verification email is sent automatically to the provided address after registration. Use the `/api/auth/verify-email` endpoint with the token from that email to activate the account.\n\n> 📧 In development mode, the verification token can be retrieved programmatically via `GET /api/auth/dev/email-verification-token?email=<email>` — this is used automatically by the Postman pre-request script.\n\n---\n\n### Request Body\n\n```json\n{\n  \"fullName\": \"John Doe\",\n  \"phoneNumber\": \"0599123456\",\n  \"address\": \"Ramallah, Palestine\",\n  \"email\": \"john@example.com\",\n  \"password\": \"Secret@123\",\n  \"cityId\": 1\n}\n```\n\n---\n\n### Validation Rules\n\n| Field | Rules |\n|---|---|\n| `fullName` | Required · 3–100 characters |\n| `phoneNumber` | Required · Valid Palestinian format (`05XXXXXXXX`) · Exactly 10 digits |\n| `address` | Required · 5–255 characters |\n| `email` | Required · Valid email format |\n| `password` | Required · Min 8 chars · Uppercase · Lowercase · Number · Special character (`!@#$%^&*` etc.) |\n| `cityId` | Required · Positive integer |\n\n---\n\n### Success Response — `201 Created`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"message\": \"User registered successfully\",\n  \"data\": {\n    \"user\": {\n      \"user_id\": 1,\n      \"full_name\": \"John Doe\",\n      \"email\": \"john@example.com\",\n      \"phone_number\": \"0599123456\",\n      \"address\": \"Ramallah, Palestine\",\n      \"city_id\": 1,\n      \"account_status\": \"PENDING_VERIFICATION\",\n      \"is_verified\": false,\n      \"created_at\": \"2024-01-01T00:00:00.000Z\",\n      \"city\": { \"city_id\": 1, \"city_name\": \"Nablus\" }\n    },\n    \"accessToken\": \"<jwt_access_token>\",\n    \"refreshToken\": \"<jwt_refresh_token>\"\n  }\n}\n```\n\n> 🍪 The `refreshToken` is also set as an `HttpOnly` cookie scoped to `/api/auth/refresh-token` (30-day expiry).\n\n---\n\n### Error Responses\n\n| Status | Message | Cause |\n|---|---|---|\n| `400 Bad Request` | Validation error | Missing or invalid fields |\n| `409 Conflict` | Email already exists | An account with this email is already registered |\n| `409 Conflict` | Phone number already exists | An account with this phone number is already registered |\n| `500 Internal Server Error` | Internal server error | Unexpected server-side failure |"
       }
     },
     {
@@ -249,7 +250,8 @@
             "auth",
             "login"
           ]
-        }
+        },
+        "description": "### Login User\n\n**Endpoint**\n\nPOST /api/auth/login\n\n**Description**\n\nAuthenticates an existing user with their email and password. Returns a JWT access token and sets an `HttpOnly` cookie containing the refresh token. Also updates the user's `last_login` timestamp.\n\n> ⚠️ The account must not be banned or suspended. Email verification is not required to log in, but account status is checked.\n\n---\n\n### Request Body\n\n```json\n{\n  \"email\": \"john@example.com\",\n  \"password\": \"Secret@123\"\n}\n```\n\n---\n\n### Validation Rules\n\n| Field | Rules |\n| --- | --- |\n| `email` | Required · Valid email format |\n| `password` | Required · Minimum 8 characters |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Login successful\",\n  \"data\": {\n    \"user\": {\n      \"user_id\": 1,\n      \"full_name\": \"John Doe\",\n      \"email\": \"john@example.com\",\n      \"phone_number\": \"0599123456\",\n      \"address\": \"Ramallah, Palestine\",\n      \"city_id\": 3,\n      \"account_status\": \"ACTIVE\",\n      \"is_verified\": true,\n      \"last_login\": \"2024-01-01T00:00:00.000Z\",\n      \"total_transactions\": 5,\n      \"city\": { \"city_id\": 3, \"city_name\": \"Ramallah\" },\n      \"user_roles\": [{ \"role_id\": 1, \"role\": { \"role_name\": \"USER\" } }]\n    },\n    \"accessToken\": \"<jwt_access_token>\",\n    \"refreshToken\": \"<jwt_refresh_token>\"\n  }\n}\n```\n\n> 🍪 A `refreshToken` cookie is also set automatically (`HttpOnly`, `SameSite=Strict`, 30-day expiry, scoped to `/api/auth/refresh-token`).\n\n---\n\n### Error Responses\n\n| Status | Message | Cause |\n| --- | --- | --- |\n| `400 Bad Request` | Validation error | Missing or invalid fields |\n| `401 Unauthorized` | Invalid email or password | Credentials do not match |\n| `403 Forbidden` | Account is banned | User account has been banned |\n| `403 Forbidden` | Account is suspended | User account has been suspended |"
       }
     },
     {
@@ -308,7 +310,8 @@
             "auth",
             "refresh-token"
           ]
-        }
+        },
+        "description": "### Refresh Access Token\n\n**Endpoint**\n\nPOST /api/auth/refresh-token\n\n**Description**\n\nIssues a new pair of JWT access token and refresh token using the existing refresh token stored in the `refreshToken` HttpOnly cookie. The old refresh token is invalidated and replaced with a new one in the database.\n\n> 🍪 This endpoint reads the refresh token from the `refreshToken` cookie automatically set during login or registration. No request body is needed.\n\n> ⚠️ The refresh token must be valid, not expired (30-day TTL), and must match the one stored in the database for the user. Banned accounts are rejected.\n\n---\n\n### Request Body\n\nNo request body required. The refresh token is read from the `refreshToken` cookie.\n\n---\n\n### Authentication\n\n| Type | Details |\n|---|---|\n| Cookie | `refreshToken` — HttpOnly cookie set by `/api/auth/login` or `/api/auth/register` |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Token refreshed successfully\",\n  \"data\": {\n    \"accessToken\": \"<new_jwt_access_token>\",\n    \"refreshToken\": \"<new_jwt_refresh_token>\"\n  }\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Message | Cause |\n|---|---|---|\n| `401 Unauthorized` | Refresh token required | Cookie is missing |\n| `401 Unauthorized` | Invalid or expired token | Token is invalid, expired, or does not match the stored token |\n| `403 Forbidden` | Account is banned | User account has been banned |"
       }
     },
     {
@@ -379,7 +382,8 @@
               "value": "{{emailVerificationToken}}"
             }
           ]
-        }
+        },
+        "description": "### Verify Email\n\n**Endpoint**\n\nGET /api/auth/verify-email?token=<verification_token>\n\n**Description**\n\nVerifies a user's email address using the token sent to their inbox after registration. On success, the user's `is_verified` flag is set to `true` and their `account_status` is updated from `PENDING_VERIFICATION` to `ACTIVE`.\n\nThe verification token is single-use and expires after **24 hours**. Once used, the token is marked as `is_used = true` and cannot be reused.\n\n> 📧 The verification email is sent automatically after a successful `/api/auth/register` call.\n\n---\n\n### Query Parameters\n\n| Parameter | Type | Required | Description |\n|---|---|---|---|\n| `token` | string | ✅ | The verification token received in the email |\n\n---\n\n### Validation Rules\n\n- `token` query parameter must be present in the request URL.\n- Token must exist in the database, not be used (`is_used = false`), and not be expired (`expires_at > now`).\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Email verified successfully\",\n  \"data\": {\n    \"message\": \"Email verified successfully\"\n  }\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Message | Cause |\n|---|---|---|\n| `400 Bad Request` | Verification token required | `token` query param is missing |\n| `400 Bad Request` | Invalid or expired token | Token not found, already used, or expired |"
       }
     },
     {
@@ -459,7 +463,8 @@
             "auth",
             "forgot-password"
           ]
-        }
+        },
+        "description": "### Forgot Password\n\n**Endpoint**\n\nPOST /api/auth/forgot-password\n\n**Description**\n\nInitiates the password reset flow for a registered user. Sends a password reset email containing a one-time token to the provided email address.\n\nAny previously unused reset tokens for the user are invalidated before a new one is created. The new token expires after **1 hour**.\n\n> ℹ️ For security reasons, if the email is not found in the system, a `404` error is returned. In production, consider returning a generic success message regardless to avoid user enumeration.\n\n---\n\n### Request Body\n\n```json\n{\n  \"email\": \"john@example.com\"\n}\n```\n\n---\n\n### Validation Rules\n\n| Field | Rules |\n|---|---|\n| `email` | Required · Valid email format |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Password reset email sent\",\n  \"data\": {\n    \"message\": \"Password reset email sent\"\n  }\n}\n```\n\n> 📧 A password reset email is sent to the provided address with a link containing the reset token. Use that token in the `/api/auth/reset-password` endpoint.\n\n---\n\n### Error Responses\n\n| Status | Message | Cause |\n|---|---|---|\n| `400 Bad Request` | Validation error | Missing or invalid email |\n| `404 Not Found` | User not found | No account exists with the given email |"
       }
     },
     {
@@ -522,7 +527,8 @@
             "auth",
             "reset-password"
           ]
-        }
+        },
+        "description": "### Reset Password\n\n**Endpoint**\n\nPOST /api/auth/reset-password\n\n**Description**\n\nResets the user's password using the one-time token received via email from the `/api/auth/forgot-password` endpoint. On success, the token is marked as used and the user's password is updated with the new hashed password.\n\n> ⚠️ The reset token expires after **1 hour** and can only be used **once**. Request a new token via `/api/auth/forgot-password` if it has expired.\n\n---\n\n### Request Body\n\n```json\n{\n  \"token\": \"a3f8c2e1d4b7f9e0c6a1b2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3\",\n  \"password\": \"NewSecret@456\"\n}\n```\n\n---\n\n### Validation Rules\n\n| Field | Rules |\n|---|---|\n| `token` | Required · Minimum 32 characters |\n| `password` | Required · Min 8 chars · Must include uppercase letter · Must include lowercase letter · Must include a number |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Password reset successfully\",\n  \"data\": {\n    \"message\": \"Password reset successfully\"\n  }\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Message | Cause |\n|---|---|---|\n| `400 Bad Request` | Validation error | Missing fields or password does not meet requirements |\n| `400 Bad Request` | Invalid or expired token | Token not found, already used, or expired (> 1 hour) |"
       }
     },
     {
@@ -602,7 +608,8 @@
             "auth",
             "profile"
           ]
-        }
+        },
+        "description": "### Get User Profile\n\n**Endpoint**\n\nGET /api/auth/profile\n\n**Description**\n\nReturns the full profile of the currently authenticated user, including personal details, city, assigned roles, and their average rating on the platform.\n\n> 🔒 This is a **protected route**. A valid JWT access token must be provided in the `Authorization` header as a Bearer token.\n\n---\n\n### Authentication\n\n| Type | Header | Format |\n|---|---|---|\n| Bearer Token | `Authorization` | `Bearer <jwt_access_token>` |\n\nObtain the access token from `/api/auth/login` or `/api/auth/register`.\n\n> ⚠️ The token is verified against the JWT secret. Expired or invalid tokens return `401`. Banned or suspended accounts return `403`.\n\n---\n\n### Request Body\n\nNo request body required.\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Profile retrieved successfully\",\n  \"data\": {\n    \"user_id\": 1,\n    \"full_name\": \"John Doe\",\n    \"email\": \"john@example.com\",\n    \"phone_number\": \"0599123456\",\n    \"address\": \"Ramallah, Palestine\",\n    \"city_id\": 3,\n    \"account_status\": \"ACTIVE\",\n    \"is_verified\": true,\n    \"created_at\": \"2024-01-01T00:00:00.000Z\",\n    \"last_login\": \"2024-06-01T10:00:00.000Z\",\n    \"total_transactions\": 12,\n    \"city\": { \"city_id\": 3, \"city_name\": \"Ramallah\" },\n    \"user_roles\": [{ \"role_id\": 1, \"role\": { \"role_name\": \"USER\" } }],\n    \"average_rating\": 4.5\n  }\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Message | Cause |\n|---|---|---|\n| `401 Unauthorized` | Authentication required | `Authorization` header is missing |\n| `401 Unauthorized` | Invalid token | Token is malformed or invalid |\n| `401 Unauthorized` | Token expired | JWT access token has expired — use `/api/auth/refresh-token` |\n| `403 Forbidden` | Account is banned | User account has been banned |\n| `403 Forbidden` | Account is suspended | User account has been suspended |\n| `404 Not Found` | User not found | Authenticated user no longer exists in the database |\n| `500 Internal Server Error` | Internal server error | Unexpected server-side failure |"
       }
     },
     {
@@ -664,7 +671,8 @@
             "auth",
             "logout"
           ]
-        }
+        },
+        "description": "### Logout User\n\n**Endpoint**\n\nPOST /api/auth/logout\n\n**Description**\n\nLogs out the currently authenticated user by clearing their refresh token from the database and removing the `refreshToken` HttpOnly cookie. After logout, the refresh token is no longer valid and cannot be used to obtain new access tokens.\n\n> 🔒 This is a **protected route**. A valid JWT access token must be provided in the `Authorization` header as a Bearer token.\n\n> ℹ️ The access token itself is not invalidated server-side (it remains valid until it naturally expires). To fully secure a session, clients should discard the access token on their end after logout.\n\n---\n\n### Authentication\n\n| Type | Header | Format |\n|---|---|---|\n| Bearer Token | `Authorization` | `Bearer <jwt_access_token>` |\n\n---\n\n### Request Body\n\nNo request body required.\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Logout successful\",\n  \"data\": null\n}\n```\n\n> 🍪 The `refreshToken` cookie is cleared automatically on the client (scoped to `/api/auth/refresh-token`).\n\n---\n\n### Error Responses\n\n| Status | Message | Cause |\n|---|---|---|\n| `401 Unauthorized` | Authentication required | `Authorization` header is missing |\n| `401 Unauthorized` | Invalid token | Token is malformed or invalid |\n| `401 Unauthorized` | Token expired | JWT access token has expired — use `/api/auth/refresh-token` first |\n| `403 Forbidden` | Account is banned | User account has been banned |\n| `403 Forbidden` | Account is suspended | User account has been suspended |\n| `500 Internal Server Error` | Internal server error | Unexpected server-side failure |"
       }
     }
   ]

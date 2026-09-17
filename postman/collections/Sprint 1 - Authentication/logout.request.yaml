@@ -1,4 +1,60 @@
 $kind: http-request
+description: |-
+  ### Logout User
+
+  **Endpoint**
+
+  POST /api/auth/logout
+
+  **Description**
+
+  Logs out the currently authenticated user by clearing their refresh token from the database and removing the `refreshToken` HttpOnly cookie. After logout, the refresh token is no longer valid and cannot be used to obtain new access tokens.
+
+  > 🔒 This is a **protected route**. A valid JWT access token must be provided in the `Authorization` header as a Bearer token.
+
+  > ℹ️ The access token itself is not invalidated server-side (it remains valid until it naturally expires). To fully secure a session, clients should discard the access token on their end after logout.
+
+  ---
+
+  ### Authentication
+
+  | Type | Header | Format |
+  |---|---|---|
+  | Bearer Token | `Authorization` | `Bearer <jwt_access_token>` |
+
+  ---
+
+  ### Request Body
+
+  No request body required.
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Logout successful",
+    "data": null
+  }
+  ```
+
+  > 🍪 The `refreshToken` cookie is cleared automatically on the client (scoped to `/api/auth/refresh-token`).
+
+  ---
+
+  ### Error Responses
+
+  | Status | Message | Cause |
+  |---|---|---|
+  | `401 Unauthorized` | Authentication required | `Authorization` header is missing |
+  | `401 Unauthorized` | Invalid token | Token is malformed or invalid |
+  | `401 Unauthorized` | Token expired | JWT access token has expired — use `/api/auth/refresh-token` first |
+  | `403 Forbidden` | Account is banned | User account has been banned |
+  | `403 Forbidden` | Account is suspended | User account has been suspended |
+  | `500 Internal Server Error` | Internal server error | Unexpected server-side failure |
 url: "{{baseUrl}}/api/auth/logout"
 method: POST
 auth:
