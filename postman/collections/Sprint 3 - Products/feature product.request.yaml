@@ -1,0 +1,78 @@
+$kind: http-request
+description: |-
+  ### Feature a Product
+
+  **Endpoint:** `PATCH /api/products/:id/feature`
+
+  **Access:** 🔐 Admin only — requires authentication with Admin role
+
+  > Marks a product as featured for a specified number of days.
+
+  ---
+
+  ### Path Parameters
+
+  | Parameter | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `id` | integer | ✅ | Product ID |
+
+  ---
+
+  ### Request Body (JSON)
+
+  | Field | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `durationDays` | integer | ❌ | Days to feature the product (default: 7) |
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Product featured successfully",
+    "data": { "product_id": 1, "is_featured": true, "featured_until": "..." }
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Message | Cause |
+  | --- | --- | --- |
+  | `401 Unauthorized` | Unauthorized | Missing or invalid token |
+  | `403 Forbidden` | Forbidden | Authenticated user is not an Admin |
+  | `404 Not Found` | Product not found | No product with given ID |
+url: "{{baseUrl}}/api/products/{{productId}}/feature"
+method: PATCH
+pathVariables:
+  - key: productId
+    value: "{{productId}}"
+    description: Product ID
+body:
+  type: json
+  content: |-
+    {
+      "durationDays": 7
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has success flag true", function () {
+          pm.expect(json.success).to.be.true;
+      });
+    language: text/javascript
+order: 15000

@@ -12,6 +12,15 @@ const transactionRoutes = require('./transaction.routes');
 const notificationRoutes = require('./notification.routes');
 
 // ============================================================
+// REQUEST LOGGER (TEMPORARY FOR DEBUGGING)
+// ============================================================
+
+router.use((req, res, next) => {
+  console.log(`API HIT: ${req.method} ${req.originalUrl}`);
+  next();
+});
+
+// ============================================================
 // HEALTH CHECK
 // ============================================================
 

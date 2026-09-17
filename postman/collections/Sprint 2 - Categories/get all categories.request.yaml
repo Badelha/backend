@@ -1,0 +1,53 @@
+$kind: http-request
+description: |-
+  ### Get All Categories
+
+  **Endpoint:** `GET /api/categories`
+
+  **Access:** 🌐 Public — no authentication required
+
+  ---
+
+  Returns all top-level categories including their subcategories (children).
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Categories retrieved successfully",
+    "data": [
+      {
+        "category_id": 1,
+        "category_name": "Clothing",
+        "description": "Clothes and apparel",
+        "icon": "👕",
+        "display_order": 1,
+        "children": [...]
+      }
+    ]
+  }
+  ```
+url: "{{baseUrl}}/api/categories"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has success flag true", function () {
+          pm.expect(json.success).to.be.true;
+      });
+
+      pm.test("Response data is an array", function () {
+          pm.expect(json.data).to.be.an("array");
+      });
+    language: text/javascript
+order: 1000

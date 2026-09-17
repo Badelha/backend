@@ -1,0 +1,98 @@
+$kind: http-request
+name: update product
+order: 2000
+description: |-
+  ### Update Product
+
+  **Endpoint:** `PUT /api/products/:id`
+
+  **Access:** 🔐 Private — requires authentication (owner only)
+
+  > Only the product owner can update their listing.
+  > Include `Authorization: Bearer {{accessToken}}` in the header.
+
+  ---
+
+  ### Path Parameters
+
+  | Parameter | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `id` | integer | ✅ | Product ID |
+
+  ---
+
+  ### Request Body (JSON) — all fields optional
+
+  | Field | Type | Rules |
+  | --- | --- | --- |
+  | `title` | string | 5–200 characters |
+  | `description` | string | Minimum 10 characters |
+  | `categoryId` | integer | Positive integer |
+  | `cityId` | integer | Positive integer |
+  | `condition` | string | `NEW`, `LIKE_NEW`, `GOOD`, `FAIR`, or `POOR` |
+  | `price` | number | Positive number |
+  | `exchangePreference` | string | `EXCHANGE_ONLY`, `PURCHASE_ONLY`, or `BOTH` |
+  | `additionalInfo` | string | Max 500 characters |
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Product updated successfully",
+    "data": { "product_id": 1, "title": "Updated Title", ... }
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Message | Cause |
+  | --- | --- | --- |
+  | `400 Bad Request` | Validation error | Invalid field values |
+  | `401 Unauthorized` | Unauthorized | Missing or invalid token |
+  | `403 Forbidden` | Forbidden | Not the product owner |
+  | `404 Not Found` | Product not found | No product with given ID |
+url: '{{baseUrl}}/api/products/{{productId}}'
+method: PUT
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+pathVariables:
+  - key: productId
+    value: '{{productId}}'
+    description: Product ID (set by Create Product)
+body:
+  type: json
+  content: |-
+    {
+      "title": "Vintage Leather Jacket - Updated",
+      "description": "Genuine leather jacket in excellent condition, lightly used",
+      "condition": "GOOD",
+      "price": 120,
+      "exchangePreference": "BOTH",
+      "additionalInfo": "Willing to negotiate"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has success flag true", function () {
+          pm.expect(json.success).to.be.true;
+      });
+
+      pm.test("Response message is correct", function () {
+          pm.expect(json.message).to.eql("Product updated successfully");
+      });

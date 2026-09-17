@@ -1,0 +1,64 @@
+$kind: http-request
+description: |-
+  ### Delete Product
+
+  **Endpoint:** `DELETE /api/products/:id`
+
+  **Access:** 🔐 Private — requires authentication (owner only)
+
+  > Performs a **soft delete** — the product is marked as deleted but not permanently removed.
+  > Only the product owner can delete their listing.
+
+  ---
+
+  ### Path Parameters
+
+  | Parameter | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `id` | integer | ✅ | Product ID |
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Product deleted successfully"
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Message | Cause |
+  | --- | --- | --- |
+  | `401 Unauthorized` | Unauthorized | Missing or invalid token |
+  | `403 Forbidden` | Forbidden | Not the product owner |
+  | `404 Not Found` | Product not found | No product with given ID |
+url: "{{baseUrl}}/api/products/{{productId}}"
+method: DELETE
+pathVariables:
+  - key: productId
+    value: "{{productId}}"
+    description: Product ID (set by Create Product)
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has success flag true", function () {
+          pm.expect(json.success).to.be.true;
+      });
+    language: text/javascript
+order: 11000

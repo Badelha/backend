@@ -1,0 +1,70 @@
+$kind: http-request
+name: delete product image
+order: 5000
+description: |-
+  ### Delete Product Image
+
+  **Endpoint:** `DELETE /api/products/:id/images/:imageId`
+
+  **Access:** 🔐 Private — requires authentication (owner only)
+
+  > Permanently removes an image from a product listing.
+  > `{{imageId}}` is saved automatically by the **Add Product Image** request.
+
+  ---
+
+  ### Path Parameters
+
+  | Parameter | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `id` | integer | ✅ | Product ID |
+  | `imageId` | integer | ✅ | Image ID to delete |
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Image deleted successfully"
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Message | Cause |
+  | --- | --- | --- |
+  | `401 Unauthorized` | Unauthorized | Missing or invalid token |
+  | `403 Forbidden` | Forbidden | Not the product owner |
+  | `404 Not Found` | Image not found | No image with given ID on this product |
+url: '{{baseUrl}}/api/products/{{productId}}/images/{{imageId}}'
+method: DELETE
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+pathVariables:
+  - key: productId
+    value: '{{productId}}'
+    description: Product ID
+  - key: imageId
+    value: '{{imageId}}'
+    description: Image ID (set by Add Product Image)
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has success flag true", function () {
+          pm.expect(json.success).to.be.true;
+      });

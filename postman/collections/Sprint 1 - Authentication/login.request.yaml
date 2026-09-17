@@ -8,13 +8,7 @@ description: |-
 
   **Description**
 
-  Authenticates an existing user with their email and password.
-
-  Returns a JWT access token and
-
-  sets an `HttpOnly` cookie containing the refresh token.
-
-  Also updates the user's `last_login` timestamp.
+  Authenticates an existing user with their email and password. Returns a JWT access token and sets an `HttpOnly` cookie containing the refresh token. Also updates the user's `last_login` timestamp.
 
   > ⚠️ The account must not be banned or suspended. Email verification is not required to log in, but account status is checked. 
     
@@ -154,4 +148,4 @@ scripts:
           console.log("✅ accessToken and refreshToken saved to environment from login.");
       }
     language: text/javascript
-order: 1787060946624
+order: 2000

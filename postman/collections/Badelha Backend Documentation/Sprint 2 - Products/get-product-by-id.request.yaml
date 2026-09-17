@@ -1,0 +1,80 @@
+$kind: http-request
+name: get product by id
+order: 700
+description: |-
+  ### Get Product by ID
+
+  **Endpoint:** `GET /api/products/:id`
+
+  **Access:** 🌐 Public — no authentication required
+
+  ---
+
+  ### Path Parameters
+
+  | Parameter | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `id` | integer | ✅ | Product ID (positive integer) |
+
+  > 💡 `{{productId}}` is automatically set after running **Create Product**.
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Product retrieved successfully",
+    "data": {
+      "product_id": 1,
+      "title": "Vintage Leather Jacket",
+      "description": "...",
+      "condition": "LIKE_NEW",
+      "price": 150,
+      "status": "ACTIVE",
+      "is_featured": false,
+      "category": {...},
+      "city": {...},
+      "images": [...],
+      "tags": [...]
+    }
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Message | Cause |
+  | --- | --- | --- |
+  | `400 Bad Request` | Validation error | Invalid product ID format |
+  | `404 Not Found` | Product not found | No product with given ID |
+url: '{{baseUrl}}/api/products/{{productId}}'
+method: GET
+pathVariables:
+  - key: productId
+    value: '{{productId}}'
+    description: Product ID (set automatically by Create Product)
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has success flag true", function () {
+          pm.expect(json.success).to.be.true;
+      });
+
+      pm.test("Product has required fields", function () {
+          const p = json.data;
+          pm.expect(p).to.have.property("product_id");
+          pm.expect(p).to.have.property("title");
+          pm.expect(p).to.have.property("condition");
+          pm.expect(p).to.have.property("status");
+      });

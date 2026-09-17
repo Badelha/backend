@@ -1,0 +1,62 @@
+$kind: http-request
+description: |-
+  ### Get My Product Listings
+
+  **Endpoint:** `GET /api/products/my/listings`
+
+  **Access:** 🔐 Private — requires authentication
+
+  > Include `Authorization: Bearer {{accessToken}}` in the header.
+  > Run the **Login** request first to get a valid token.
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Products retrieved successfully",
+    "data": [
+      {
+        "product_id": 1,
+        "title": "Vintage Leather Jacket",
+        "status": "ACTIVE",
+        ...
+      }
+    ]
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Message | Cause |
+  | --- | --- | --- |
+  | `401 Unauthorized` | Unauthorized | Missing or invalid access token |
+url: "{{baseUrl}}/api/products/my/listings"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has success flag true", function () {
+          pm.expect(json.success).to.be.true;
+      });
+
+      pm.test("Response data is an array", function () {
+          pm.expect(json.data).to.be.an("array");
+      });
+    language: text/javascript
+order: 8000

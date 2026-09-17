@@ -1,0 +1,62 @@
+$kind: http-request
+name: get products by category
+order: 400
+description: |-
+  ### Get Products by Category
+
+  **Endpoint:** `GET /api/products/category/:categoryId`
+
+  **Access:** 🌐 Public — no authentication required
+
+  ---
+
+  ### Path Parameters
+
+  | Parameter | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `categoryId` | integer | ✅ | Category ID (positive integer) |
+
+  ---
+
+  ### Query Parameters
+
+  Same filters as **Get All Products**: `page`, `limit`, `condition`, `minPrice`, `maxPrice`, `sort`
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Products retrieved successfully",
+    "data": { "products": [...], "pagination": {...} }
+  }
+  ```
+url: '{{baseUrl}}/api/products/category/{{categoryId}}'
+method: GET
+pathVariables:
+  - key: categoryId
+    value: '{{categoryId}}'
+    description: Category ID
+queryParams:
+  - key: page
+    value: '1'
+    disabled: true
+  - key: limit
+    value: '20'
+    disabled: true
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has success flag true", function () {
+          pm.expect(json.success).to.be.true;
+      });

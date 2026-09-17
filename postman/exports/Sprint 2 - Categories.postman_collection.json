@@ -1,0 +1,295 @@
+{
+  "info": {
+    "name": "Sprint 2 - Categories",
+    "_postman_id": "2db48326-17ab-41c9-af8a-cd083b664d26",
+    "description": "Badelha Backend – Sprint 2 - Categories",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "get all categories",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/categories",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "categories"
+          ]
+        },
+        "description": "### Get All Categories\n\n**Endpoint:** `GET /api/categories`\n\n**Access:** 🌐 Public — no authentication required\n\n---\n\nReturns all top-level categories including their subcategories (children).\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Categories retrieved successfully\",\n  \"data\": [\n    {\n      \"category_id\": 1,\n      \"category_name\": \"Clothing\",\n      \"description\": \"Clothes and apparel\",\n      \"icon\": \"👕\",\n      \"display_order\": 1,\n      \"children\": [...]\n    }\n  ]\n}\n```"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response has success flag true\", function () {",
+              "    pm.expect(json.success).to.be.true;",
+              "});",
+              "",
+              "pm.test(\"Response data is an array\", function () {",
+              "    pm.expect(json.data).to.be.an(\"array\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "get category by id",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/categories/{{categoryId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "categories",
+            "{{categoryId}}"
+          ],
+          "variable": [
+            {
+              "key": "categoryId",
+              "value": "{{categoryId}}",
+              "description": "Category ID (set by Create Category)"
+            }
+          ]
+        },
+        "description": "### Get Category by ID\n\n**Endpoint:** `GET /api/categories/:id`\n\n**Access:** 🌐 Public — no authentication required\n\n---\n\nReturns a single category including its parent, subcategories, and the 10 most recent active products.\n\n> 💡 `{{categoryId}}` is saved automatically after running **Create Category**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Category ID (positive integer) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Category retrieved successfully\",\n  \"data\": {\n    \"category_id\": 1,\n    \"category_name\": \"Clothing\",\n    \"parent\": null,\n    \"children\": [...],\n    \"products\": [...]\n  }\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Message | Cause |\n| --- | --- | --- |\n| `400 Bad Request` | Validation error | Invalid category ID format |\n| `404 Not Found` | Category not found | No category with given ID |"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response has success flag true\", function () {",
+              "    pm.expect(json.success).to.be.true;",
+              "});",
+              "",
+              "pm.test(\"Category has required fields\", function () {",
+              "    pm.expect(json.data).to.have.property(\"category_id\");",
+              "    pm.expect(json.data).to.have.property(\"category_name\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "create category",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/categories",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "categories"
+          ]
+        },
+        "description": "### Create Category\n\n**Endpoint:** `POST /api/categories`\n\n**Access:** 🔐 Admin only — requires authentication with Admin role\n\n> Only administrators can create new categories.\n> Include `Authorization: Bearer {{accessToken}}` with an Admin account.\n\n---\n\n### Request Body (JSON)\n\n| Field | Type | Required | Rules |\n| --- | --- | --- | --- |\n| `name` | string | ✅ | 2–100 characters |\n| `description` | string | ❌ | Max 500 characters |\n| `icon` | string | ❌ | Emoji or icon identifier |\n| `parentId` | integer | ❌ | Parent category ID (for subcategories) |\n| `displayOrder` | integer | ❌ | Display order (default: 0) |\n\n---\n\n### Success Response — `201 Created`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"message\": \"Category created successfully\",\n  \"data\": {\n    \"category_id\": 5,\n    \"category_name\": \"Electronics\",\n    \"description\": \"Electronic devices and accessories\",\n    \"icon\": \"📱\",\n    \"display_order\": 2\n  }\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Message | Cause |\n| --- | --- | --- |\n| `400 Bad Request` | Validation error | Missing or invalid fields |\n| `401 Unauthorized` | Unauthorized | Missing or invalid token |\n| `403 Forbidden` | Forbidden | Authenticated user is not an Admin |\n| `409 Conflict` | Category already exists | A category with that name already exists |",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Electronics\",\n  \"description\": \"Electronic devices and accessories\",\n  \"icon\": \"📱\",\n  \"displayOrder\": 2\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 201\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test(\"Response has success flag true\", function () {",
+              "    pm.expect(json.success).to.be.true;",
+              "});",
+              "",
+              "pm.test(\"Category has required fields\", function () {",
+              "    pm.expect(json.data).to.have.property(\"category_id\");",
+              "    pm.expect(json.data).to.have.property(\"category_name\");",
+              "});",
+              "",
+              "pm.test(\"Response message is correct\", function () {",
+              "    pm.expect(json.message).to.eql(\"Category created successfully\");",
+              "});",
+              "",
+              "if (pm.response.code === 201 && json.data?.category_id) {",
+              "    pm.environment.set(\"categoryId\", json.data.category_id);",
+              "    console.log(\"✅ categoryId saved to environment:\", json.data.category_id);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "update category",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/categories/{{categoryId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "categories",
+            "{{categoryId}}"
+          ],
+          "variable": [
+            {
+              "key": "categoryId",
+              "value": "{{categoryId}}",
+              "description": "Category ID (set by Create Category)"
+            }
+          ]
+        },
+        "description": "### Update Category\n\n**Endpoint:** `PUT /api/categories/:id`\n\n**Access:** 🔐 Admin only — requires authentication with Admin role\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Category ID |\n\n---\n\n### Request Body (JSON) — all fields optional\n\n| Field | Type | Rules |\n| --- | --- | --- |\n| `name` | string | 2–100 characters |\n| `description` | string | Max 500 characters |\n| `icon` | string | Emoji or icon identifier |\n| `displayOrder` | integer | Non-negative integer |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Category updated successfully\",\n  \"data\": { \"category_id\": 5, \"category_name\": \"Electronics - Updated\", ... }\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Message | Cause |\n| --- | --- | --- |\n| `400 Bad Request` | Validation error | Invalid field values |\n| `401 Unauthorized` | Unauthorized | Missing or invalid token |\n| `403 Forbidden` | Forbidden | Not an Admin |\n| `404 Not Found` | Category not found | No category with given ID |",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Electronics - Updated\",\n  \"description\": \"Updated description for electronic devices\",\n  \"icon\": \"💻\",\n  \"displayOrder\": 3\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response has success flag true\", function () {",
+              "    pm.expect(json.success).to.be.true;",
+              "});",
+              "",
+              "pm.test(\"Response message is correct\", function () {",
+              "    pm.expect(json.message).to.eql(\"Category updated successfully\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "delete category",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/categories/{{categoryId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "categories",
+            "{{categoryId}}"
+          ],
+          "variable": [
+            {
+              "key": "categoryId",
+              "value": "{{categoryId}}",
+              "description": "Category ID (set by Create Category)"
+            }
+          ]
+        },
+        "description": "### Delete Category\n\n**Endpoint:** `DELETE /api/categories/:id`\n\n**Access:** 🔐 Admin only — requires authentication with Admin role\n\n> Performs a **soft delete** — the category is marked as deleted but not permanently removed.\n> ⚠️ Deletion fails if the category has active products or subcategories.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Category ID |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Category deleted successfully\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Message | Cause |\n| --- | --- | --- |\n| `400 Bad Request` | Category has products and cannot be deleted | Category has active listings |\n| `400 Bad Request` | Category has subcategories and cannot be deleted | Category has children |\n| `401 Unauthorized` | Unauthorized | Missing or invalid token |\n| `403 Forbidden` | Forbidden | Not an Admin |\n| `404 Not Found` | Category not found | No category with given ID |",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response has success flag true\", function () {",
+              "    pm.expect(json.success).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": []
+}

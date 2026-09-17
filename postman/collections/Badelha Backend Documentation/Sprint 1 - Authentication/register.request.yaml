@@ -1,5 +1,4 @@
 $kind: http-request
-name: register
 description: |-
   # **Register User**
 
@@ -226,11 +225,11 @@ body:
 
     \"fullName\": \"Dina Jendeya\",\r
 
-    \"phoneNumber\": \"0596723456\",\r
+    \"phoneNumber\": \"0594453456\",\r
 
     \"address\": \"Gazahero\",\r
 
-    \"email\": \"dina111@test.com\",\r
+    \"email\": \"mena@test.com\",\r
 
     \"password\": \"Password123!\",\r
 

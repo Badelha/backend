@@ -1,0 +1,68 @@
+$kind: http-request
+name: delete category
+order: 5000
+description: |-
+  ### Delete Category
+
+  **Endpoint:** `DELETE /api/categories/:id`
+
+  **Access:** 🔐 Admin only — requires authentication with Admin role
+
+  > Performs a **soft delete** — the category is marked as deleted but not permanently removed.
+  > ⚠️ Deletion fails if the category has active products or subcategories.
+
+  ---
+
+  ### Path Parameters
+
+  | Parameter | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `id` | integer | ✅ | Category ID |
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Category deleted successfully"
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Message | Cause |
+  | --- | --- | --- |
+  | `400 Bad Request` | Category has products and cannot be deleted | Category has active listings |
+  | `400 Bad Request` | Category has subcategories and cannot be deleted | Category has children |
+  | `401 Unauthorized` | Unauthorized | Missing or invalid token |
+  | `403 Forbidden` | Forbidden | Not an Admin |
+  | `404 Not Found` | Category not found | No category with given ID |
+url: '{{baseUrl}}/api/categories/{{categoryId}}'
+method: DELETE
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+pathVariables:
+  - key: categoryId
+    value: '{{categoryId}}'
+    description: Category ID (set by Create Category)
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has success flag true", function () {
+          pm.expect(json.success).to.be.true;
+      });

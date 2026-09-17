@@ -1,2 +1,5 @@
 $kind: collection
-name: Badelha Backend Documentation
+variables:
+  - key: json_web_token_0wlq
+    secret: true
+    disabled: false

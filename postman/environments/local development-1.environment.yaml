@@ -2,8 +2,5 @@ name: local development
 values:
   - key: baseUrl
     value: ''
-  - key: accessToken
-    secret: true
-  - key: refreshToken
+  - key: a
     value: ''
-color: 0

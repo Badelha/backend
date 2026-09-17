@@ -1,0 +1,52 @@
+$kind: http-request
+name: get products by city
+order: 500
+description: |-
+  ### Get Products by City
+
+  **Endpoint:** `GET /api/products/city/:cityId`
+
+  **Access:** 🌐 Public — no authentication required
+
+  ---
+
+  ### Path Parameters
+
+  | Parameter | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `cityId` | integer | ✅ | City ID (positive integer) |
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Products retrieved successfully",
+    "data": { "products": [...], "pagination": {...} }
+  }
+  ```
+url: '{{baseUrl}}/api/products/city/{{cityId}}'
+method: GET
+pathVariables:
+  - key: cityId
+    value: '{{cityId}}'
+    description: City ID
+queryParams:
+  - key: page
+    value: '1'
+    disabled: true
+  - key: limit
+    value: '20'
+    disabled: true
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });

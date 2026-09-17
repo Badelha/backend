@@ -1,0 +1,75 @@
+$kind: http-request
+name: get category by id
+order: 2000
+description: |-
+  ### Get Category by ID
+
+  **Endpoint:** `GET /api/categories/:id`
+
+  **Access:** 🌐 Public — no authentication required
+
+  ---
+
+  Returns a single category including its parent, subcategories, and the 10 most recent active products.
+
+  > 💡 `{{categoryId}}` is saved automatically after running **Create Category**.
+
+  ---
+
+  ### Path Parameters
+
+  | Parameter | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `id` | integer | ✅ | Category ID (positive integer) |
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Category retrieved successfully",
+    "data": {
+      "category_id": 1,
+      "category_name": "Clothing",
+      "parent": null,
+      "children": [...],
+      "products": [...]
+    }
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Message | Cause |
+  | --- | --- | --- |
+  | `400 Bad Request` | Validation error | Invalid category ID format |
+  | `404 Not Found` | Category not found | No category with given ID |
+url: '{{baseUrl}}/api/categories/{{categoryId}}'
+method: GET
+pathVariables:
+  - key: categoryId
+    value: '{{categoryId}}'
+    description: Category ID (set by Create Category)
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has success flag true", function () {
+          pm.expect(json.success).to.be.true;
+      });
+
+      pm.test("Category has required fields", function () {
+          pm.expect(json.data).to.have.property("category_id");
+          pm.expect(json.data).to.have.property("category_name");
+      });
