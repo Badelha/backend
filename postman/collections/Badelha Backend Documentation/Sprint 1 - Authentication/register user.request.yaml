@@ -23,10 +23,10 @@ description: |-
   {
     "fullName": "John Doe",
     "phoneNumber": "0599123456",
-    "address": "Ramallah, Palestine",
+    "address": "Al Remal Street",
     "email": "john@example.com",
     "password": "Secret@123",
-    "cityId": 1
+    "city": "Gaza"
   }
   ```
 
@@ -38,10 +38,10 @@ description: |-
   |---|---|
   | `fullName` | Required · 3–100 characters |
   | `phoneNumber` | Required · Valid Palestinian format (`05XXXXXXXX`) · Exactly 10 digits |
-  | `address` | Required · 5–255 characters |
+  | `address` | Optional · max 500 characters · detailed street-level description |
   | `email` | Required · Valid email format |
   | `password` | Required · Min 8 chars · Uppercase · Lowercase · Number · Special character (`!@#$%^&*` etc.) |
-  | `cityId` | Required · Positive integer |
+  | `city` | Optional · Gaza region name from the dropdown (`Gaza`, `Rafah`, `Khan Yunis`, ...) |
 
   ---
 
@@ -58,12 +58,12 @@ description: |-
         "full_name": "John Doe",
         "email": "john@example.com",
         "phone_number": "0599123456",
-        "address": "Ramallah, Palestine",
+        "address": "Al Remal Street",
         "city_id": 1,
         "account_status": "PENDING_VERIFICATION",
         "is_verified": false,
         "created_at": "2024-01-01T00:00:00.000Z",
-        "city": { "city_id": 1, "city_name": "Nablus" }
+        "city": "Gaza"
       },
       "accessToken": "<jwt_access_token>",
       "refreshToken": "<jwt_refresh_token>"
@@ -96,8 +96,8 @@ body:
       "email": "{{testEmail}}",
       "password": "{{testPassword}}",
       "phoneNumber": "{{testPhone}}",
-      "address": "Ramallah, Palestine",
-      "cityId": 1
+      "address": "Al Remal Street",
+      "city": "Gaza"
     }
 scripts:
   - type: preRequest

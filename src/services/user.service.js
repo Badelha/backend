@@ -1,6 +1,7 @@
 const prisma = require('../config/prisma');
-const { hashPassword } = require('../utils/bcrypt');
 const { getPagination } = require('../utils/pagination');
+const CityService = require('./city.service');
+const { USER_PUBLIC_SELECT, serializeUser, serializeUsers } = require('../utils/userProfile');
 
 class UserService {
   /**
@@ -29,28 +30,7 @@ class UserService {
     const [users, total] = await Promise.all([
       prisma.user.findMany({
         where,
-        select: {
-          user_id: true,
-          full_name: true,
-          phone_number: true,
-          address: true,
-          email: true,
-          account_status: true,
-          is_verified: true,
-          created_at: true,
-          last_login: true,
-          total_transactions: true,
-          city_id: true,
-          city: true,
-          user_roles: {
-            where: { deleted_at: null },
-            select: {
-              role_id: true,
-              user_id: true,
-              role: true,
-            },
-          },
-        },
+        select: USER_PUBLIC_SELECT,
         skip,
         take,
         orderBy: { created_at: 'desc' },
@@ -58,7 +38,7 @@ class UserService {
       prisma.user.count({ where }),
     ]);
 
-    return { users, total, page, limit };
+    return { users: serializeUsers(users), total, page, limit };
   }
 
   /**
@@ -70,28 +50,7 @@ class UserService {
         user_id: userId,
         deleted_at: null,
       },
-      select: {
-        user_id: true,
-        full_name: true,
-        phone_number: true,
-        address: true,
-        email: true,
-        account_status: true,
-        is_verified: true,
-        created_at: true,
-        last_login: true,
-        total_transactions: true,
-        city_id: true,
-        city: true,
-        user_roles: {
-          where: { deleted_at: null },
-          select: {
-            role_id: true,
-            user_id: true,
-            role: true,
-          },
-        },
-      },
+      select: USER_PUBLIC_SELECT,
     });
 
     if (!user) {
@@ -108,9 +67,8 @@ class UserService {
       },
     });
 
-    const { password_hash, ...userWithoutPassword } = user;
     return {
-      ...userWithoutPassword,
+      ...serializeUser(user),
       average_rating: avgRating._avg.rating_score || 0,
     };
   }
@@ -131,38 +89,26 @@ class UserService {
     const updateData = {};
     if (data.fullName) updateData.full_name = data.fullName;
     if (data.phoneNumber) updateData.phone_number = data.phoneNumber;
-    if (data.address) updateData.address = data.address;
-    if (data.cityId) updateData.city_id = data.cityId;
+    if (data.address !== undefined) {
+      const trimmed = data.address == null ? null : String(data.address).trim();
+      updateData.address = trimmed === '' ? null : trimmed;
+    }
+
+    const cityId = await CityService.resolveCityId({
+      city: data.city,
+      cityId: data.cityId,
+    });
+    if (cityId !== undefined) {
+      updateData.city_id = cityId;
+    }
 
     const updatedUser = await prisma.user.update({
       where: { user_id: userId },
       data: updateData,
-      select: {
-        user_id: true,
-        full_name: true,
-        phone_number: true,
-        address: true,
-        email: true,
-        account_status: true,
-        is_verified: true,
-        created_at: true,
-        last_login: true,
-        total_transactions: true,
-        city_id: true,
-        city: true,
-        user_roles: {
-          where: { deleted_at: null },
-          select: {
-            role_id: true,
-            user_id: true,
-            role: true,
-          },
-        },
-      },
+      select: USER_PUBLIC_SELECT,
     });
 
-    const { password_hash, ...userWithoutPassword } = updatedUser;
-    return userWithoutPassword;
+    return serializeUser(updatedUser);
   }
 
   /**
@@ -186,32 +132,10 @@ class UserService {
     const updatedUser = await prisma.user.update({
       where: { user_id: userId },
       data: { account_status: status },
-      select: {
-        user_id: true,
-        full_name: true,
-        phone_number: true,
-        address: true,
-        email: true,
-        account_status: true,
-        is_verified: true,
-        created_at: true,
-        last_login: true,
-        total_transactions: true,
-        city_id: true,
-        city: true,
-        user_roles: {
-          where: { deleted_at: null },
-          select: {
-            role_id: true,
-            user_id: true,
-            role: true,
-          },
-        },
-      },
+      select: USER_PUBLIC_SELECT,
     });
 
-    const { password_hash, ...userWithoutPassword } = updatedUser;
-    return userWithoutPassword;
+    return serializeUser(updatedUser);
   }
 
   /**

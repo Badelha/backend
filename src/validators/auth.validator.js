@@ -1,4 +1,25 @@
-const { body } = require('express-validator');
+const { body, param, query } = require('express-validator');
+const { GAZA_CITIES, isAllowedGazaCity } = require('../constants/gazaRegions');
+
+const cityFieldValidator = (field = 'city') =>
+  body(field)
+    .optional({ values: 'falsy' })
+    .isString().withMessage('City must be a string')
+    .trim()
+    .custom((value) => {
+      if (!isAllowedGazaCity(value)) {
+        throw new Error(`City must be one of: ${GAZA_CITIES.join(', ')}`);
+      }
+      return true;
+    });
+
+const addressFieldValidator = [
+  body('address')
+    .optional({ values: 'null' })
+    .isString().withMessage('Address must be a string')
+    .trim()
+    .isLength({ max: 500 }).withMessage('Address must be at most 500 characters'),
+];
 
 const registerValidator = [
   body('fullName')
@@ -11,9 +32,8 @@ const registerValidator = [
     .matches(/^05[0-9]{8}$/).withMessage('Invalid Palestinian phone number format (e.g., 0599123456)')
     .isLength({ min: 10, max: 10 }).withMessage('Phone number must be exactly 10 characters'),
 
-  body('address')
-    .notEmpty().withMessage('Address is required')
-    .isLength({ min: 3, max: 255 }).withMessage('Address must be between 3 and 255 characters'),
+  ...addressFieldValidator,
+  cityFieldValidator('city'),
 
   body('email')
     .notEmpty().withMessage('Email is required')
@@ -29,8 +49,9 @@ const registerValidator = [
     .matches(/[!@#$%^&*(),.?":{}|<>]/).withMessage('Password must contain at least one special character'),
 
   body('cityId')
-    .notEmpty().withMessage('City is required')
-    .isInt({ min: 1 }).withMessage('City ID must be a positive integer'),
+    .optional({ values: 'falsy' })
+    .isInt({ min: 1 }).withMessage('City ID must be a positive integer')
+    .toInt(),
 ];
 
 const loginValidator = [
@@ -79,13 +100,13 @@ const updateProfileValidator = [
     .optional()
     .matches(/^05[0-9]{8}$/).withMessage('Invalid Palestinian phone number format'),
 
-  body('address')
-    .optional()
-    .isLength({ min: 5, max: 255 }).withMessage('Address must be between 5 and 255 characters'),
+  ...addressFieldValidator,
+  cityFieldValidator('city'),
 
   body('cityId')
-    .optional()
-    .isInt({ min: 1 }).withMessage('City ID must be a positive integer'),
+    .optional({ values: 'falsy' })
+    .isInt({ min: 1 }).withMessage('City ID must be a positive integer')
+    .toInt(),
 ];
 
 module.exports = {
@@ -95,4 +116,6 @@ module.exports = {
   resetPasswordValidator,
   refreshTokenValidator,
   updateProfileValidator,
+  cityFieldValidator,
+  addressFieldValidator,
 };

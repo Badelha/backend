@@ -10,6 +10,9 @@
     "syntax:check": "find . -type f -name '*.js' -not -path './node_modules/*' -not -path './.git/*' -print0 | xargs -0 -n1 node --check",
     "test": "node --test"
   },
+  "prisma": {
+    "seed": "node scripts/seed.js"
+  },
   "license": "ISC",
   "directories": {
     "test": "tests"

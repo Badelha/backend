@@ -54,7 +54,11 @@ if (process.env.NODE_ENV === 'development') {
 
 // ============= Public Routes =============
 
-// Register new user
+/**
+ * @route   POST /api/auth/register
+ * @body    {string} city - Optional Gaza region from dropdown, e.g. "Gaza"
+ * @body    {string} address - Optional detailed address, e.g. "Al Remal Street"
+ */
 router.post('/register', registerValidator, validate, AuthController.register);
 
 // Login user

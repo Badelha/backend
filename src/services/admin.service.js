@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const { USER_PUBLIC_SELECT, serializeUsers } = require('../utils/userProfile');
 
 class AdminService {
   /**
@@ -245,28 +246,7 @@ class AdminService {
     const [users, total] = await Promise.all([
       prisma.user.findMany({
         where,
-        select: {
-          user_id: true,
-          full_name: true,
-          phone_number: true,
-          address: true,
-          email: true,
-          account_status: true,
-          is_verified: true,
-          created_at: true,
-          last_login: true,
-          total_transactions: true,
-          city_id: true,
-          city: true,
-          user_roles: {
-            where: { deleted_at: null },
-            select: {
-              role_id: true,
-              user_id: true,
-              role: true,
-            },
-          },
-        },
+        select: USER_PUBLIC_SELECT,
         orderBy: { created_at: 'desc' },
         skip,
         take: Number(limit),
@@ -274,7 +254,7 @@ class AdminService {
       prisma.user.count({ where }),
     ]);
 
-    return { users, total, page, limit };
+    return { users: serializeUsers(users), total, page, limit };
   }
 
   /**

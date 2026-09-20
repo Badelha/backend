@@ -4,6 +4,8 @@ const { generateTokens, verifyToken } = require('../utils/jwt');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../utils/email');
 const config = require('../config/env');
 const crypto = require('crypto');
+const CityService = require('./city.service');
+const { USER_PUBLIC_SELECT, serializeUser } = require('../utils/userProfile');
 
 class AuthService {
   /**
@@ -29,6 +31,10 @@ class AuthService {
     }
 
     const hashedPassword = await hashPassword(userData.password);
+    const cityId = await CityService.resolveCityId({
+      city: userData.city,
+      cityId: userData.cityId,
+    });
 
     // Create user and related data in transaction
     const newUser = await prisma.$transaction(async (tx) => {
@@ -37,15 +43,13 @@ class AuthService {
         data: {
           full_name: userData.fullName,
           phone_number: userData.phoneNumber,
-          address: userData.address,
+          address: userData.address ? String(userData.address).trim() : null,
           email: userData.email,
           password_hash: hashedPassword,
-          city_id: userData.cityId,
+          city_id: cityId ?? null,
           account_status: 'PENDING_VERIFICATION',
         },
-        include: {
-          city: true,
-        },
+        select: USER_PUBLIC_SELECT,
       });
 
       // Get USER role from database (NO hardcoded IDs)
@@ -80,7 +84,6 @@ class AuthService {
     sendVerificationEmail(newUser.email, crypto.randomBytes(32).toString('hex'))
       .catch(console.error);
 
-    const { password_hash, ...userWithoutPassword } = newUser;
     const tokens = generateTokens(newUser);
 
     // Save refresh token in database
@@ -92,7 +95,7 @@ class AuthService {
       },
     });
 
-    return { user: userWithoutPassword, ...tokens };
+    return { user: serializeUser(newUser), ...tokens };
   }
 
   /**
@@ -105,27 +108,8 @@ class AuthService {
         deleted_at: null,
       },
       select: {
-        user_id: true,
-        full_name: true,
-        phone_number: true,
-        address: true,
-        email: true,
+        ...USER_PUBLIC_SELECT,
         password_hash: true,
-        account_status: true,
-        is_verified: true,
-        created_at: true,
-        last_login: true,
-        total_transactions: true,
-        city_id: true,
-        city: true,
-        user_roles: {
-          where: { deleted_at: null },
-          select: {
-            role_id: true,
-            user_id: true,
-            role: true,
-          },
-        },
       },
     });
 
@@ -160,7 +144,7 @@ class AuthService {
 
     const { password_hash, ...userWithoutPassword } = user;
 
-    return { user: userWithoutPassword, ...tokens };
+    return { user: serializeUser(userWithoutPassword), ...tokens };
   }
 
   /**
@@ -320,28 +304,7 @@ class AuthService {
         user_id: userId,
         deleted_at: null,
       },
-      select: {
-        user_id: true,
-        full_name: true,
-        phone_number: true,
-        address: true,
-        email: true,
-        account_status: true,
-        is_verified: true,
-        created_at: true,
-        last_login: true,
-        total_transactions: true,
-        city_id: true,
-        city: true,
-        user_roles: {
-          where: { deleted_at: null },
-          select: {
-            role_id: true,
-            user_id: true,
-            role: true,
-          },
-        },
-      },
+      select: USER_PUBLIC_SELECT,
     });
 
     if (!user) {
@@ -359,9 +322,8 @@ class AuthService {
       },
     });
 
-    const { password_hash, ...userWithoutPassword } = user;
     return {
-      ...userWithoutPassword,
+      ...serializeUser(user),
       average_rating: avgRating._avg.rating_score || 0,
     };
   }

@@ -1,16 +1,18 @@
 const AuthService = require('../services/auth.service');
 const { successResponse, errorResponse } = require('../utils/response');
 const config = require('../config/env');
+const { pickUserProfileInput } = require('../utils/userProfile');
 
 class AuthController {
   static async register(req, res) {
     try {
-      const result = await AuthService.register(req.body);
+      const result = await AuthService.register(pickUserProfileInput(req.body));
       successResponse(res, 201, result, 'User registered successfully');
     } catch (error) {
       const errorMap = {
         'EMAIL_ALREADY_EXISTS': { status: 409, message: 'Email already exists' },
         'PHONE_ALREADY_EXISTS': { status: 409, message: 'Phone number already exists' },
+        'INVALID_CITY': { status: 400, message: 'City must be a valid Gaza region' },
       };
       const mapped = errorMap[error.message];
       if (mapped) {

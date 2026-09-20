@@ -10,6 +10,18 @@ const {
   getUsersValidator,
   getUserByIdValidator,
 } = require('../validators/user.validator');
+const CityController = require('../controllers/city.controller');
+
+// ============================================================
+// PUBLIC ROUTES
+// ============================================================
+
+/**
+ * @route   GET /api/users/cities
+ * @desc    List Gaza regions for the city dropdown
+ * @access  Public
+ */
+router.get('/cities', CityController.listCities);
 
 // ============================================================
 // PUBLIC ROUTES

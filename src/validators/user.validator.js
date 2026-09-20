@@ -1,4 +1,5 @@
 const { body, param, query } = require('express-validator');
+const { cityFieldValidator, addressFieldValidator } = require('./auth.validator');
 
 const updateProfileValidator = [
   body('fullName')
@@ -12,13 +13,11 @@ const updateProfileValidator = [
     .matches(/^05[0-9]{8}$/).withMessage('Invalid Palestinian phone number format (e.g., 0599123456)')
     .isLength({ min: 10, max: 10 }).withMessage('Phone number must be exactly 10 characters'),
 
-  body('address')
-    .optional()
-    .isLength({ min: 5, max: 255 }).withMessage('Address must be between 5 and 255 characters')
-    .trim(),
+  ...addressFieldValidator,
+  cityFieldValidator('city'),
 
   body('cityId')
-    .optional()
+    .optional({ values: 'falsy' })
     .isInt({ min: 1 }).withMessage('City ID must be a positive integer')
     .toInt(),
 ];

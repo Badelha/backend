@@ -43,7 +43,7 @@ description: |-
 
   ## Request Body
 
-  JSON1{2 "fullName": "Dina Jendeya",3 "phoneNumber": "0595723456",4 "address": "Gazahero",5 "email": "dina1@test.com",6 "password": "Password123!",7 "cityId": 18}Show more lines
+  JSON1{2 "fullName": "Dina Jendeya",3 "phoneNumber": "0595723456",4 "address": "Al Remal Street",5 "email": "dina1@test.com",6 "password": "Password123!",7 "city": "Gaza"8}Show more lines
 
   ### Request Fields
 
@@ -51,10 +51,10 @@ description: |-
   | --- | --- | --- | --- |
   | fullName | string | Yes | User full name |
   | phoneNumber | string | Yes | Palestinian phone number |
-  | address | string | Yes | User address |
+  | address | string | No | Detailed street-level address |
   | email | string | Yes | User email |
   | password | string | Yes | User password |
-  | cityId | integer | Yes | Existing city identifier |
+  | city | string | No | Gaza region dropdown value (e.g. Gaza) |
 
   ---
 

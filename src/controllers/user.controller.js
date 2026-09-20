@@ -1,5 +1,6 @@
 const UserService = require('../services/user.service');
 const { successResponse, errorResponse } = require('../utils/response');
+const { pickUserProfileInput } = require('../utils/userProfile');
 
 class UserController {
   static async getAllUsers(req, res) {
@@ -29,11 +30,19 @@ class UserController {
 
   static async updateProfile(req, res) {
     try {
-      const user = await UserService.updateProfile(req.user.user_id, req.body);
+      const { fullName, phoneNumber, address, city, cityId } = pickUserProfileInput(req.body);
+      const user = await UserService.updateProfile(req.user.user_id, {
+        fullName,
+        phoneNumber,
+        address,
+        city,
+        cityId,
+      });
       successResponse(res, 200, user, 'Profile updated successfully');
     } catch (error) {
       const errorMap = {
         'USER_NOT_FOUND': { status: 404, message: 'User not found' },
+        'INVALID_CITY': { status: 400, message: 'City must be a valid Gaza region' },
       };
       const mapped = errorMap[error.message];
       if (mapped) {

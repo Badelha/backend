@@ -22,6 +22,7 @@ module.exports = {
     PROFILE_UPDATED: 'Profile updated successfully',
     USER_NOT_FOUND: 'User not found',
     USER_DELETED: 'User deleted successfully',
+    INVALID_CITY: 'City must be a valid Gaza region',
   },
 
   PRODUCT: {
