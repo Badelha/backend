@@ -1,0 +1,17 @@
+$kind: collection
+name: 'Purchase Requests'
+description: |-
+  ## Purchase Requests
+
+  Full lifecycle endpoints for purchase requests. The authenticated user can be either the initiator (buyer) or the target (seller).
+
+  | Endpoint | Description |
+  | --- | --- |
+  | `POST /api/purchases` | Create a new purchase request |
+  | `GET /api/purchases` | List all purchase requests (paginated, filterable by status) |
+  | `GET /api/purchases/:id` | Get a single purchase request by ID |
+  | `PATCH /api/purchases/:id/accept` | Accept a pending purchase request (seller only) |
+  | `PATCH /api/purchases/:id/reject` | Reject a pending purchase request (seller only) |
+  | `PATCH /api/purchases/:id/complete` | Mark an accepted purchase as completed |
+  | `PATCH /api/purchases/:id/cancel` | Cancel a pending purchase request (buyer only) |
+order: 1000

@@ -6,4 +6,44 @@ values:
     secret: true
   - key: refreshToken
     value: ''
+  - key: targetUserId
+    value: '2'
+    enabled: true
+    type: default
+  - key: productId
+    value: '1'
+    enabled: true
+    type: default
+  - key: offeredPrice
+    value: '100'
+    enabled: true
+    type: default
+  - key: initiatorProductId
+    value: '1'
+    enabled: true
+    type: default
+  - key: targetProductId
+    value: '2'
+    enabled: true
+    type: default
+  - key: purchaseId
+    value: '1'
+    enabled: true
+    type: default
+  - key: exchangeId
+    value: '1'
+    enabled: true
+    type: default
+  - key: notificationId
+    value: '1'
+    enabled: true
+    type: default
+  - key: page
+    value: '1'
+    enabled: true
+    type: default
+  - key: limit
+    value: '20'
+    enabled: true
+    type: default
 color: 0

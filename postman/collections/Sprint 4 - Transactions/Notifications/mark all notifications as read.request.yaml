@@ -1,0 +1,60 @@
+$kind: http-request
+description: |-
+  ### Mark All Notifications as Read
+
+  **Endpoint:** `PATCH /api/notifications/read-all`
+
+  **Access:** 🔐 Authenticated — requires a valid Bearer token
+
+  Marks every notification belonging to the authenticated user as read in a single bulk operation.
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "All notifications marked as read",
+    "data": {
+      "count": 5
+    },
+    "timestamp": "2024-01-01T00:00:00.000Z"
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Cause |
+  | --- | --- |
+  | `401 Unauthorized` | Missing or invalid Bearer token |
+url: '{{baseUrl}}/api/notifications/read-all'
+method: PATCH
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Accept
+    value: application/json
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response envelope is valid", function () {
+          pm.expect(json).to.have.property("success", true);
+          pm.expect(json).to.have.property("statusCode", 200);
+          pm.expect(json).to.have.property("message", "All notifications marked as read");
+          pm.expect(json).to.have.property("data");
+      });
+    language: text/javascript
+order: 3000

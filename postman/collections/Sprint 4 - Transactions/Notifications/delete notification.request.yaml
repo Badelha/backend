@@ -1,0 +1,75 @@
+$kind: http-request
+description: |-
+  ### Delete Notification
+
+  **Endpoint:** `DELETE /api/notifications/:id`
+
+  **Access:** 🔐 Authenticated — requires a valid Bearer token
+
+  Permanently deletes a single notification by its numeric ID. The notification must belong to the authenticated user.
+
+  > 💡 `{{notificationId}}` is automatically captured after running **Get All Notifications**.
+
+  ---
+
+  ### Path Parameters
+
+  | Parameter | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `id` | integer | ✅ | Notification ID (positive integer) |
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Notification deleted successfully",
+    "data": {
+      "notification_id": 1
+    },
+    "timestamp": "2024-01-01T00:00:00.000Z"
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Cause |
+  | --- | --- |
+  | `401 Unauthorized` | Missing or invalid Bearer token |
+  | `404 Not Found` | No notification with the given ID |
+url: '{{baseUrl}}/api/notifications/{{notificationId}}'
+method: DELETE
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: id
+    value: '{{notificationId}}'
+    description: 'Notification ID (auto-set by Get All Notifications)'
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response envelope is valid", function () {
+          pm.expect(json).to.have.property("success", true);
+          pm.expect(json).to.have.property("statusCode", 200);
+          pm.expect(json).to.have.property("message", "Notification deleted successfully");
+          pm.expect(json).to.have.property("data");
+      });
+    language: text/javascript
+order: 5000

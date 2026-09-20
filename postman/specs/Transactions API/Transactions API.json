@@ -1,0 +1,790 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Transactions API",
+    "version": "1.0.0",
+    "description": "## Sprint 4 — Transactions, Purchases, Exchanges & Notifications\n\nThis collection covers all user-facing transactional domains implemented in the Badelha backend. All routes are authenticated via `src/routes/index.js` and the individual route files — not the obsolete mock handlers in `src/app.js`.\n\n### Authentication\nAll requests send `Authorization: Bearer {{accessToken}}`. Obtain a token via the **Sprint 1 – Authentication** collection and store it in the active environment's `accessToken` variable.\n\n### Collection Variables\n| Variable | Default | Purpose |\n| --- | --- | --- |\n| `targetUserId` | `2` | Target user ID for create purchase/exchange requests |\n| `productId` | `1` | Product ID for create purchase requests |\n| `offeredPrice` | `100` | Offered price for create purchase requests |\n| `initiatorProductId` | `1` | Your product ID for create exchange requests |\n| `targetProductId` | `2` | Target product ID for create exchange requests |\n| `purchaseId` | `1` | ID used in single-purchase requests (auto-captured) |\n| `exchangeId` | `1` | ID used in single-exchange requests (auto-captured) |\n| `notificationId` | `1` | ID used in single-notification requests (auto-captured) |\n| `page` | `1` | Default page number for paginated endpoints |\n| `limit` | `20` | Default page size for paginated endpoints |\n\n### Folders\n| Folder | Endpoints |\n| --- | --- |\n| Purchase Requests | POST /api/purchases, GET /api/purchases, GET /api/purchases/:id, PATCH /api/purchases/:id/accept, PATCH /api/purchases/:id/reject, PATCH /api/purchases/:id/complete, PATCH /api/purchases/:id/cancel |\n| Exchange Requests | POST /api/exchanges, GET /api/exchanges, GET /api/exchanges/:id, PATCH /api/exchanges/:id/accept, PATCH /api/exchanges/:id/reject, PATCH /api/exchanges/:id/complete, PATCH /api/exchanges/:id/cancel |\n| Notifications | GET /api/notifications, GET /api/notifications/unread-count, PATCH /api/notifications/read-all, PATCH /api/notifications/:id/read, DELETE /api/notifications/:id |\n| Transactions | GET /api/transactions, GET /api/transactions/stats |"
+  },
+  "servers": [
+    {
+      "url": "{{baseUrl}}"
+    }
+  ],
+  "paths": {
+    "/api/purchases": {
+      "post": {
+        "summary": "create purchase",
+        "responses": {},
+        "tags": [
+          "Purchase Requests"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "### Create Purchase Request\n\n**Endpoint:** `POST /api/purchases`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nCreates a new purchase request for a product listed by another user. The authenticated user becomes the initiator (buyer). The product must be `AVAILABLE` and owned by `targetUserId`. On success the product status is set to `RESERVED` and a notification is sent to the seller.\n\n---\n\n### Request Body\n\n| Field | Type | Required | Description |\n| --- | --- | --- | --- |\n| `targetUserId` | integer | ✅ | ID of the product owner (seller) |\n| `productId` | integer | ✅ | ID of the product to purchase |\n| `offeredPrice` | number | ✅ | Offered price (must be > 0) |\n| `message` | string | ❌ | Optional message to the seller (max 500 chars) |\n\n---\n\n### Success Response — `201 Created`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"message\": \"Purchase request created successfully\",\n  \"data\": {\n    \"purchase_request_id\": 1,\n    \"initiator_user_id\": 2,\n    \"target_user_id\": 3,\n    \"product_id\": 5,\n    \"offered_price\": 150.00,\n    \"buyer_message\": \"I'd like to buy this\",\n    \"request_status\": \"PENDING\",\n    \"requested_at\": \"2024-01-01T00:00:00.000Z\"\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `400 Bad Request` | Validation error or trying to buy own product |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `409 Conflict` | Product not available or pending request already exists |",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "targetUserId": {
+                    "type": "integer"
+                  },
+                  "productId": {
+                    "type": "integer"
+                  },
+                  "offeredPrice": {
+                    "type": "integer"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "targetUserId": 2,
+                "productId": 1,
+                "offeredPrice": 100,
+                "message": "I'd like to purchase this item"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "get all purchases",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number (default: 1, min: 1)",
+            "schema": {
+              "type": "string"
+            },
+            "example": "{{page}}"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Items per page (default: 20, max: 100)",
+            "schema": {
+              "type": "string"
+            },
+            "example": "{{limit}}"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Optional filter: PENDING | ACCEPTED | REJECTED | COMPLETED | CANCELLED",
+            "schema": {
+              "type": "string"
+            },
+            "example": ""
+          }
+        ],
+        "responses": {},
+        "tags": [
+          "Purchase Requests"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "### Get All Purchases\n\n**Endpoint:** `GET /api/purchases`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nReturns a paginated list of purchase requests where the authenticated user is either the initiator (buyer) or the target (seller). Supports optional filtering by status.\n\n---\n\n### Query Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `page` | integer | ❌ | Page number (default: 1, min: 1) |\n| `limit` | integer | ❌ | Items per page (default: 20, max: 100) |\n| `status` | string | ❌ | Filter by status: `PENDING`, `ACCEPTED`, `REJECTED`, `COMPLETED`, `CANCELLED` |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Purchase requests retrieved successfully\",\n  \"data\": {\n    \"requests\": [\n      {\n        \"purchase_request_id\": 1,\n        \"initiator_user_id\": 2,\n        \"target_user_id\": 3,\n        \"product_id\": 5,\n        \"offered_price\": 150.00,\n        \"buyer_message\": \"I'd like to buy this\",\n        \"request_status\": \"PENDING\",\n        \"requested_at\": \"2024-01-01T00:00:00.000Z\"\n      }\n    ],\n    \"total\": 1,\n    \"page\": 1,\n    \"limit\": 20\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |"
+      }
+    },
+    "/api/purchases/{purchaseId}": {
+      "get": {
+        "summary": "get purchase by id",
+        "responses": {},
+        "tags": [
+          "Purchase Requests"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "### Get Purchase by ID\n\n**Endpoint:** `GET /api/purchases/:id`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nReturns a single purchase request by its numeric ID. The authenticated user must be either the initiator or the target of the request.\n\n> 💡 `{{purchaseId}}` is automatically captured after running **Get All Purchases**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Purchase request ID (positive integer) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Purchase request retrieved successfully\",\n  \"data\": {\n    \"purchase_request_id\": 1,\n    \"initiator_user_id\": 2,\n    \"target_user_id\": 3,\n    \"product_id\": 5,\n    \"offered_price\": 150.00,\n    \"buyer_message\": \"I'd like to buy this\",\n    \"request_status\": \"PENDING\",\n    \"requested_at\": \"2024-01-01T00:00:00.000Z\"\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `404 Not Found` | No purchase request with the given ID |"
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Purchase request ID (auto-set by Get All Purchases)",
+          "schema": {
+            "type": "string"
+          },
+          "example": "{{purchaseId}}"
+        },
+        {
+          "name": "purchaseId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ]
+    },
+    "/api/purchases/{purchaseId}/accept": {
+      "patch": {
+        "summary": "accept purchase",
+        "responses": {},
+        "tags": [
+          "Purchase Requests"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "### Accept Purchase Request\n\n**Endpoint:** `PATCH /api/purchases/:id/accept`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nAccepts a pending purchase request. Only the target user (seller) can accept. Transitions the request status from `PENDING` to `ACCEPTED`.\n\n> 💡 `{{purchaseId}}` is automatically captured after running **Create Purchase** or **Get All Purchases**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Purchase request ID (positive integer) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Purchase request accepted successfully\",\n  \"data\": {\n    \"purchase_request_id\": 1,\n    \"request_status\": \"ACCEPTED\"\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `404 Not Found` | Purchase request not found |"
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Purchase request ID (auto-set by Create/Get All Purchases)",
+          "schema": {
+            "type": "string"
+          },
+          "example": "{{purchaseId}}"
+        },
+        {
+          "name": "purchaseId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ]
+    },
+    "/api/purchases/{purchaseId}/reject": {
+      "patch": {
+        "summary": "reject purchase",
+        "responses": {},
+        "tags": [
+          "Purchase Requests"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "### Reject Purchase Request\n\n**Endpoint:** `PATCH /api/purchases/:id/reject`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nRejects a pending purchase request. Only the target user (seller) can reject. Transitions the request status from `PENDING` to `REJECTED`. An optional rejection reason can be provided.\n\n> 💡 `{{purchaseId}}` is automatically captured after running **Create Purchase** or **Get All Purchases**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Purchase request ID (positive integer) |\n\n### Request Body\n\n| Field | Type | Required | Description |\n| --- | --- | --- | --- |\n| `reason` | string | ❌ | Rejection reason (max 500 chars) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Purchase request rejected successfully\",\n  \"data\": {\n    \"purchase_request_id\": 1,\n    \"request_status\": \"REJECTED\"\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `404 Not Found` | Purchase request not found |",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "reason": "Item is no longer available"
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Purchase request ID (auto-set by Create/Get All Purchases)",
+          "schema": {
+            "type": "string"
+          },
+          "example": "{{purchaseId}}"
+        },
+        {
+          "name": "purchaseId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ]
+    },
+    "/api/purchases/{purchaseId}/complete": {
+      "patch": {
+        "summary": "complete purchase",
+        "responses": {},
+        "tags": [
+          "Purchase Requests"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "### Complete Purchase Request\n\n**Endpoint:** `PATCH /api/purchases/:id/complete`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nMarks an accepted purchase request as completed. Transitions the request status from `ACCEPTED` to `COMPLETED`.\n\n> 💡 `{{purchaseId}}` is automatically captured after running **Create Purchase** or **Get All Purchases**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Purchase request ID (positive integer) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Purchase completed successfully\",\n  \"data\": {\n    \"purchase_request_id\": 1,\n    \"request_status\": \"COMPLETED\"\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `404 Not Found` | Purchase request not found |"
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Purchase request ID (auto-set by Create/Get All Purchases)",
+          "schema": {
+            "type": "string"
+          },
+          "example": "{{purchaseId}}"
+        },
+        {
+          "name": "purchaseId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ]
+    },
+    "/api/purchases/{purchaseId}/cancel": {
+      "patch": {
+        "summary": "cancel purchase",
+        "responses": {},
+        "tags": [
+          "Purchase Requests"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "### Cancel Purchase Request\n\n**Endpoint:** `PATCH /api/purchases/:id/cancel`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nCancels a purchase request. The initiator (buyer) can cancel a `PENDING` request. Transitions the request status to `CANCELLED`.\n\n> 💡 `{{purchaseId}}` is automatically captured after running **Create Purchase** or **Get All Purchases**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Purchase request ID (positive integer) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Purchase cancelled successfully\",\n  \"data\": {\n    \"purchase_request_id\": 1,\n    \"request_status\": \"CANCELLED\"\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `404 Not Found` | Purchase request not found |"
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Purchase request ID (auto-set by Create/Get All Purchases)",
+          "schema": {
+            "type": "string"
+          },
+          "example": "{{purchaseId}}"
+        },
+        {
+          "name": "purchaseId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ]
+    },
+    "/api/exchanges": {
+      "post": {
+        "summary": "create exchange",
+        "responses": {},
+        "tags": [
+          "Exchange Requests"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "### Create Exchange Request\n\n**Endpoint:** `POST /api/exchanges`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nCreates a new product exchange request. The authenticated user becomes the initiator. Both `initiatorProductId` (your product) and `targetProductId` (the product you want) must be `AVAILABLE`. You cannot exchange with yourself.\n\n---\n\n### Request Body\n\n| Field | Type | Required | Description |\n| --- | --- | --- | --- |\n| `targetUserId` | integer | ✅ | ID of the other user (product owner) |\n| `initiatorProductId` | integer | ✅ | ID of your product to offer |\n| `targetProductId` | integer | ✅ | ID of the product you want |\n| `message` | string | ❌ | Optional message to the other user (max 500 chars) |\n\n---\n\n### Success Response — `201 Created`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"message\": \"Exchange request created successfully\",\n  \"data\": {\n    \"exchange_request_id\": 1,\n    \"initiator_user_id\": 2,\n    \"target_user_id\": 3,\n    \"initiator_product_id\": 4,\n    \"target_product_id\": 5,\n    \"request_status\": \"PENDING\",\n    \"requested_at\": \"2024-01-01T00:00:00.000Z\"\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `400 Bad Request` | Validation error or trying to exchange with yourself |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `409 Conflict` | One of the products is not available or a pending request already exists |",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "targetUserId": {
+                    "type": "integer"
+                  },
+                  "initiatorProductId": {
+                    "type": "integer"
+                  },
+                  "targetProductId": {
+                    "type": "integer"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "targetUserId": 2,
+                "initiatorProductId": 1,
+                "targetProductId": 2,
+                "message": "I'd like to exchange my product for yours"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "get all exchanges",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number (default: 1, min: 1)",
+            "schema": {
+              "type": "string"
+            },
+            "example": "{{page}}"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Items per page (default: 20, max: 100)",
+            "schema": {
+              "type": "string"
+            },
+            "example": "{{limit}}"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Optional filter: PENDING | ACCEPTED | REJECTED | COMPLETED | CANCELLED",
+            "schema": {
+              "type": "string"
+            },
+            "example": ""
+          }
+        ],
+        "responses": {},
+        "tags": [
+          "Exchange Requests"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "### Get All Exchanges\n\n**Endpoint:** `GET /api/exchanges`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nReturns a paginated list of exchange requests where the authenticated user is either the initiator or the target. Supports optional filtering by status.\n\n---\n\n### Query Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `page` | integer | ❌ | Page number (default: 1, min: 1) |\n| `limit` | integer | ❌ | Items per page (default: 20, max: 100) |\n| `status` | string | ❌ | Filter by status: `PENDING`, `ACCEPTED`, `REJECTED`, `COMPLETED`, `CANCELLED` |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Exchange requests retrieved successfully\",\n  \"data\": {\n    \"requests\": [\n      {\n        \"exchange_request_id\": 1,\n        \"initiator_user_id\": 2,\n        \"target_user_id\": 3,\n        \"initiator_product_id\": 4,\n        \"target_product_id\": 5,\n        \"request_status\": \"PENDING\",\n        \"requested_at\": \"2024-01-01T00:00:00.000Z\"\n      }\n    ],\n    \"total\": 1,\n    \"page\": 1,\n    \"limit\": 20\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |"
+      }
+    },
+    "/api/exchanges/{exchangeId}": {
+      "get": {
+        "summary": "get exchange by id",
+        "responses": {},
+        "tags": [
+          "Exchange Requests"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "### Get Exchange by ID\n\n**Endpoint:** `GET /api/exchanges/:id`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nReturns a single exchange request by its numeric ID. The authenticated user must be either the initiator or the target of the request.\n\n> 💡 `{{exchangeId}}` is automatically captured after running **Get All Exchanges**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Exchange request ID (positive integer) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Exchange request retrieved successfully\",\n  \"data\": {\n    \"exchange_request_id\": 1,\n    \"initiator_user_id\": 2,\n    \"target_user_id\": 3,\n    \"initiator_product_id\": 4,\n    \"target_product_id\": 5,\n    \"request_status\": \"PENDING\",\n    \"requested_at\": \"2024-01-01T00:00:00.000Z\"\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `404 Not Found` | No exchange request with the given ID |"
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Exchange request ID (auto-set by Get All Exchanges)",
+          "schema": {
+            "type": "string"
+          },
+          "example": "{{exchangeId}}"
+        },
+        {
+          "name": "exchangeId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ]
+    },
+    "/api/exchanges/{exchangeId}/accept": {
+      "patch": {
+        "summary": "accept exchange",
+        "responses": {},
+        "tags": [
+          "Exchange Requests"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "### Accept Exchange Request\n\n**Endpoint:** `PATCH /api/exchanges/:id/accept`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nAccepts a pending exchange request. Only the target user can accept. Transitions the request status from `PENDING` to `ACCEPTED`.\n\n> 💡 `{{exchangeId}}` is automatically captured after running **Create Exchange** or **Get All Exchanges**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Exchange request ID (positive integer) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Exchange request accepted successfully\",\n  \"data\": {\n    \"exchange_request_id\": 1,\n    \"request_status\": \"ACCEPTED\"\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `404 Not Found` | Exchange request not found |"
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Exchange request ID (auto-set by Create/Get All Exchanges)",
+          "schema": {
+            "type": "string"
+          },
+          "example": "{{exchangeId}}"
+        },
+        {
+          "name": "exchangeId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ]
+    },
+    "/api/exchanges/{exchangeId}/reject": {
+      "patch": {
+        "summary": "reject exchange",
+        "responses": {},
+        "tags": [
+          "Exchange Requests"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "### Reject Exchange Request\n\n**Endpoint:** `PATCH /api/exchanges/:id/reject`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nRejects a pending exchange request. Only the target user can reject. Transitions the request status from `PENDING` to `REJECTED`. An optional rejection reason can be provided.\n\n> 💡 `{{exchangeId}}` is automatically captured after running **Create Exchange** or **Get All Exchanges**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Exchange request ID (positive integer) |\n\n### Request Body\n\n| Field | Type | Required | Description |\n| --- | --- | --- | --- |\n| `reason` | string | ❌ | Rejection reason (max 500 chars) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Exchange request rejected successfully\",\n  \"data\": {\n    \"exchange_request_id\": 1,\n    \"request_status\": \"REJECTED\"\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `404 Not Found` | Exchange request not found |",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "reason": "Not interested in this exchange"
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Exchange request ID (auto-set by Create/Get All Exchanges)",
+          "schema": {
+            "type": "string"
+          },
+          "example": "{{exchangeId}}"
+        },
+        {
+          "name": "exchangeId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ]
+    },
+    "/api/exchanges/{exchangeId}/complete": {
+      "patch": {
+        "summary": "complete exchange",
+        "responses": {},
+        "tags": [
+          "Exchange Requests"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "### Complete Exchange Request\n\n**Endpoint:** `PATCH /api/exchanges/:id/complete`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nMarks an accepted exchange request as completed. Transitions the request status from `ACCEPTED` to `COMPLETED`.\n\n> 💡 `{{exchangeId}}` is automatically captured after running **Create Exchange** or **Get All Exchanges**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Exchange request ID (positive integer) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Exchange completed successfully\",\n  \"data\": {\n    \"exchange_request_id\": 1,\n    \"request_status\": \"COMPLETED\"\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `404 Not Found` | Exchange request not found |"
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Exchange request ID (auto-set by Create/Get All Exchanges)",
+          "schema": {
+            "type": "string"
+          },
+          "example": "{{exchangeId}}"
+        },
+        {
+          "name": "exchangeId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ]
+    },
+    "/api/exchanges/{exchangeId}/cancel": {
+      "patch": {
+        "summary": "cancel exchange",
+        "responses": {},
+        "tags": [
+          "Exchange Requests"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "### Cancel Exchange Request\n\n**Endpoint:** `PATCH /api/exchanges/:id/cancel`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nCancels an exchange request. The initiator can cancel a `PENDING` request. Transitions the request status to `CANCELLED`.\n\n> 💡 `{{exchangeId}}` is automatically captured after running **Create Exchange** or **Get All Exchanges**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Exchange request ID (positive integer) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Exchange cancelled successfully\",\n  \"data\": {\n    \"exchange_request_id\": 1,\n    \"request_status\": \"CANCELLED\"\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `404 Not Found` | Exchange request not found |"
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Exchange request ID (auto-set by Create/Get All Exchanges)",
+          "schema": {
+            "type": "string"
+          },
+          "example": "{{exchangeId}}"
+        },
+        {
+          "name": "exchangeId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ]
+    },
+    "/api/notifications": {
+      "get": {
+        "summary": "get all notifications",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number (default: 1)",
+            "schema": {
+              "type": "string"
+            },
+            "example": "{{page}}"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Items per page (default: 20)",
+            "schema": {
+              "type": "string"
+            },
+            "example": "{{limit}}"
+          }
+        ],
+        "responses": {},
+        "tags": [
+          "Notifications"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "### Get All Notifications\n\n**Endpoint:** `GET /api/notifications`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nReturns all notifications (read and unread) for the authenticated user, ordered by most recent first. Supports optional pagination via `page` and `limit` query parameters.\n\n---\n\n### Query Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `page` | integer | ❌ | Page number (default: 1) |\n| `limit` | integer | ❌ | Items per page (default: 20) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Notifications retrieved successfully\",\n  \"data\": {\n    \"notifications\": [\n      {\n        \"notification_id\": 1,\n        \"user_id\": 2,\n        \"notification_type\": \"PURCHASE_REQUEST\",\n        \"message\": \"You have a new purchase offer\",\n        \"is_read\": false,\n        \"created_at\": \"2024-01-01T00:00:00.000Z\"\n      }\n    ],\n    \"total\": 1,\n    \"page\": 1,\n    \"limit\": 20\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |"
+      }
+    },
+    "/api/notifications/unread-count": {
+      "get": {
+        "summary": "get unread count",
+        "responses": {},
+        "tags": [
+          "Notifications"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "### Get Unread Notification Count\n\n**Endpoint:** `GET /api/notifications/unread-count`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nReturns the count of unread notifications for the authenticated user. Useful for badge counts and notification indicators in the UI.\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Unread notification count retrieved successfully\",\n  \"data\": {\n    \"count\": 5\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |"
+      }
+    },
+    "/api/notifications/read-all": {
+      "patch": {
+        "summary": "mark all notifications as read",
+        "responses": {},
+        "tags": [
+          "Notifications"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "### Mark All Notifications as Read\n\n**Endpoint:** `PATCH /api/notifications/read-all`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nMarks every notification belonging to the authenticated user as read in a single bulk operation.\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"All notifications marked as read\",\n  \"data\": {\n    \"count\": 5\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |"
+      }
+    },
+    "/api/notifications/{notificationId}/read": {
+      "patch": {
+        "summary": "mark notification as read",
+        "responses": {},
+        "tags": [
+          "Notifications"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "### Mark Notification as Read\n\n**Endpoint:** `PATCH /api/notifications/:id/read`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nMarks a single notification as read by its numeric ID. The notification must belong to the authenticated user.\n\n> 💡 `{{notificationId}}` is automatically captured after running **Get All Notifications**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Notification ID (positive integer) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Notification marked as read\",\n  \"data\": {\n    \"notification_id\": 1,\n    \"is_read\": true\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `404 Not Found` | No notification with the given ID |"
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Notification ID (auto-set by Get All Notifications)",
+          "schema": {
+            "type": "string"
+          },
+          "example": "{{notificationId}}"
+        },
+        {
+          "name": "notificationId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ]
+    },
+    "/api/notifications/{notificationId}": {
+      "delete": {
+        "summary": "delete notification",
+        "responses": {},
+        "tags": [
+          "Notifications"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "### Delete Notification\n\n**Endpoint:** `DELETE /api/notifications/:id`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nPermanently deletes a single notification by its numeric ID. The notification must belong to the authenticated user.\n\n> 💡 `{{notificationId}}` is automatically captured after running **Get All Notifications**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Notification ID (positive integer) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Notification deleted successfully\",\n  \"data\": {\n    \"notification_id\": 1\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `404 Not Found` | No notification with the given ID |"
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Notification ID (auto-set by Get All Notifications)",
+          "schema": {
+            "type": "string"
+          },
+          "example": "{{notificationId}}"
+        },
+        {
+          "name": "notificationId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ]
+    },
+    "/api/transactions": {
+      "get": {
+        "summary": "get all transactions",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number (default: 1)",
+            "schema": {
+              "type": "string"
+            },
+            "example": "{{page}}"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Items per page (default: 20)",
+            "schema": {
+              "type": "string"
+            },
+            "example": "{{limit}}"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Optional filter: PENDING | ACCEPTED | REJECTED | COMPLETED | CANCELLED",
+            "schema": {
+              "type": "string"
+            },
+            "example": ""
+          }
+        ],
+        "responses": {},
+        "tags": [
+          "Transactions"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "### Get All Transactions\n\n**Endpoint:** `GET /api/transactions`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nReturns a combined, paginated list of all exchange and purchase requests for the authenticated user, sorted by most recent first. Each item includes a `type` field (`EXCHANGE` or `PURCHASE`) and a `status` field.\n\n---\n\n### Query Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `page` | integer | ❌ | Page number (default: 1) |\n| `limit` | integer | ❌ | Items per page (default: 20) |\n| `status` | string | ❌ | Filter by status: `PENDING`, `ACCEPTED`, `REJECTED`, `COMPLETED`, `CANCELLED` |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Transactions retrieved successfully\",\n  \"data\": {\n    \"transactions\": [\n      {\n        \"type\": \"PURCHASE\",\n        \"status\": \"PENDING\",\n        \"created_at\": \"2024-01-01T00:00:00.000Z\"\n      },\n      {\n        \"type\": \"EXCHANGE\",\n        \"status\": \"COMPLETED\",\n        \"created_at\": \"2023-12-01T00:00:00.000Z\"\n      }\n    ],\n    \"total\": 2,\n    \"page\": 1,\n    \"limit\": 20\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |"
+      }
+    },
+    "/api/transactions/stats": {
+      "get": {
+        "summary": "get transaction stats",
+        "responses": {},
+        "tags": [
+          "Transactions"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "### Get Transaction Statistics\n\n**Endpoint:** `GET /api/transactions/stats`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nReturns aggregate statistics for the authenticated user's transactions, broken down by type (exchange and purchase) and status. Each type includes a `total` count and a `byStatus` map with counts per status value.\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Transaction statistics retrieved successfully\",\n  \"data\": {\n    \"exchange\": {\n      \"total\": 10,\n      \"byStatus\": {\n        \"PENDING\": 3,\n        \"ACCEPTED\": 2,\n        \"COMPLETED\": 4,\n        \"CANCELLED\": 1\n      }\n    },\n    \"purchase\": {\n      \"total\": 8,\n      \"byStatus\": {\n        \"PENDING\": 2,\n        \"ACCEPTED\": 1,\n        \"COMPLETED\": 5\n      }\n    }\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |"
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ]
+}

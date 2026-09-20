@@ -1,0 +1,67 @@
+$kind: collection
+name: 'Sprint 4 - Transactions'
+description: |-
+  ## Sprint 4 — Transactions, Purchases, Exchanges & Notifications
+
+  This collection covers all user-facing transactional domains implemented in the Badelha backend. All routes are authenticated via `src/routes/index.js` and the individual route files — not the obsolete mock handlers in `src/app.js`.
+
+  ### Authentication
+  All requests send `Authorization: Bearer {{accessToken}}`. Obtain a token via the **Sprint 1 – Authentication** collection and store it in the active environment's `accessToken` variable.
+
+  ### Collection Variables
+  | Variable | Default | Purpose |
+  | --- | --- | --- |
+  | `targetUserId` | `2` | Target user ID for create purchase/exchange requests |
+  | `productId` | `1` | Product ID for create purchase requests |
+  | `offeredPrice` | `100` | Offered price for create purchase requests |
+  | `initiatorProductId` | `1` | Your product ID for create exchange requests |
+  | `targetProductId` | `2` | Target product ID for create exchange requests |
+  | `purchaseId` | `1` | ID used in single-purchase requests (auto-captured) |
+  | `exchangeId` | `1` | ID used in single-exchange requests (auto-captured) |
+  | `notificationId` | `1` | ID used in single-notification requests (auto-captured) |
+  | `page` | `1` | Default page number for paginated endpoints |
+  | `limit` | `20` | Default page size for paginated endpoints |
+
+  ### Folders
+  | Folder | Endpoints |
+  | --- | --- |
+  | Purchase Requests | POST /api/purchases, GET /api/purchases, GET /api/purchases/:id, PATCH /api/purchases/:id/accept, PATCH /api/purchases/:id/reject, PATCH /api/purchases/:id/complete, PATCH /api/purchases/:id/cancel |
+  | Exchange Requests | POST /api/exchanges, GET /api/exchanges, GET /api/exchanges/:id, PATCH /api/exchanges/:id/accept, PATCH /api/exchanges/:id/reject, PATCH /api/exchanges/:id/complete, PATCH /api/exchanges/:id/cancel |
+  | Notifications | GET /api/notifications, GET /api/notifications/unread-count, PATCH /api/notifications/read-all, PATCH /api/notifications/:id/read, DELETE /api/notifications/:id |
+  | Transactions | GET /api/transactions, GET /api/transactions/stats |
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+variables:
+  - key: targetUserId
+    value: '2'
+    description: 'Target user ID for create purchase/exchange requests'
+  - key: productId
+    value: '1'
+    description: 'Product ID for create purchase requests'
+  - key: offeredPrice
+    value: '100'
+    description: 'Offered price for create purchase requests (must be > 0)'
+  - key: initiatorProductId
+    value: '1'
+    description: 'Your product ID for create exchange requests'
+  - key: targetProductId
+    value: '2'
+    description: 'Target product ID for create exchange requests'
+  - key: purchaseId
+    value: '1'
+    description: 'ID of the purchase request (auto-captured by Create/Get All Purchases)'
+  - key: exchangeId
+    value: '1'
+    description: 'ID of the exchange request (auto-captured by Create/Get All Exchanges)'
+  - key: notificationId
+    value: '1'
+    description: 'ID of the notification to act on (auto-captured by Get All Notifications)'
+  - key: page
+    value: '1'
+    description: 'Default page number for paginated list endpoints'
+  - key: limit
+    value: '20'
+    description: 'Default page size for paginated list endpoints'

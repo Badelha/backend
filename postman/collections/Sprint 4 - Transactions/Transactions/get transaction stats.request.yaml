@@ -1,0 +1,93 @@
+$kind: http-request
+description: |-
+  ### Get Transaction Statistics
+
+  **Endpoint:** `GET /api/transactions/stats`
+
+  **Access:** 🔐 Authenticated — requires a valid Bearer token
+
+  Returns aggregate statistics for the authenticated user's transactions, broken down by type (exchange and purchase) and status. Each type includes a `total` count and a `byStatus` map with counts per status value.
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Transaction statistics retrieved successfully",
+    "data": {
+      "exchange": {
+        "total": 10,
+        "byStatus": {
+          "PENDING": 3,
+          "ACCEPTED": 2,
+          "COMPLETED": 4,
+          "CANCELLED": 1
+        }
+      },
+      "purchase": {
+        "total": 8,
+        "byStatus": {
+          "PENDING": 2,
+          "ACCEPTED": 1,
+          "COMPLETED": 5
+        }
+      }
+    },
+    "timestamp": "2024-01-01T00:00:00.000Z"
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Cause |
+  | --- | --- |
+  | `401 Unauthorized` | Missing or invalid Bearer token |
+url: '{{baseUrl}}/api/transactions/stats'
+method: GET
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Accept
+    value: application/json
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response envelope is valid", function () {
+          pm.expect(json).to.have.property("success", true);
+          pm.expect(json).to.have.property("statusCode", 200);
+          pm.expect(json).to.have.property("message", "Transaction statistics retrieved successfully");
+          pm.expect(json).to.have.property("data");
+      });
+
+      pm.test("Stats has exchange and purchase breakdown", function () {
+          pm.expect(json.data).to.have.property("exchange");
+          pm.expect(json.data).to.have.property("purchase");
+          pm.expect(json.data.exchange).to.have.property("total");
+          pm.expect(json.data.exchange).to.have.property("byStatus");
+          pm.expect(json.data.purchase).to.have.property("total");
+          pm.expect(json.data.purchase).to.have.property("byStatus");
+      });
+
+      pm.test("Exchange total is a non-negative number", function () {
+          pm.expect(json.data.exchange.total).to.be.a("number").and.to.be.at.least(0);
+      });
+
+      pm.test("Purchase total is a non-negative number", function () {
+          pm.expect(json.data.purchase.total).to.be.a("number").and.to.be.at.least(0);
+      });
+    language: text/javascript
+order: 2000

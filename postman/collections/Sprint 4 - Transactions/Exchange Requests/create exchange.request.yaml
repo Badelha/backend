@@ -1,0 +1,104 @@
+$kind: http-request
+description: |-
+  ### Create Exchange Request
+
+  **Endpoint:** `POST /api/exchanges`
+
+  **Access:** 🔐 Authenticated — requires a valid Bearer token
+
+  Creates a new product exchange request. The authenticated user becomes the initiator. Both `initiatorProductId` (your product) and `targetProductId` (the product you want) must be `AVAILABLE`. You cannot exchange with yourself.
+
+  ---
+
+  ### Request Body
+
+  | Field | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `targetUserId` | integer | ✅ | ID of the other user (product owner) |
+  | `initiatorProductId` | integer | ✅ | ID of your product to offer |
+  | `targetProductId` | integer | ✅ | ID of the product you want |
+  | `message` | string | ❌ | Optional message to the other user (max 500 chars) |
+
+  ---
+
+  ### Success Response — `201 Created`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 201,
+    "message": "Exchange request created successfully",
+    "data": {
+      "exchange_request_id": 1,
+      "initiator_user_id": 2,
+      "target_user_id": 3,
+      "initiator_product_id": 4,
+      "target_product_id": 5,
+      "request_status": "PENDING",
+      "requested_at": "2024-01-01T00:00:00.000Z"
+    },
+    "timestamp": "2024-01-01T00:00:00.000Z"
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Cause |
+  | --- | --- |
+  | `400 Bad Request` | Validation error or trying to exchange with yourself |
+  | `401 Unauthorized` | Missing or invalid Bearer token |
+  | `409 Conflict` | One of the products is not available or a pending request already exists |
+url: '{{baseUrl}}/api/exchanges'
+method: POST
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+  - key: Accept
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "targetUserId": {{targetUserId}},
+      "initiatorProductId": {{initiatorProductId}},
+      "targetProductId": {{targetProductId}},
+      "message": "I'd like to exchange my product for yours"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 201", function () {
+          pm.response.to.have.status(201);
+      });
+
+      pm.test("Response envelope is valid", function () {
+          pm.expect(json).to.have.property("success", true);
+          pm.expect(json).to.have.property("statusCode", 201);
+          pm.expect(json).to.have.property("message", "Exchange request created successfully");
+          pm.expect(json).to.have.property("data");
+      });
+
+      pm.test("Created exchange has required fields", function () {
+          pm.expect(json.data).to.have.property("exchange_request_id");
+          pm.expect(json.data).to.have.property("request_status", "PENDING");
+          pm.expect(json.data).to.have.property("initiator_product_id");
+          pm.expect(json.data).to.have.property("target_product_id");
+      });
+
+      // Capture the new exchange ID for downstream requests
+      if (json.data && json.data.exchange_request_id) {
+          pm.collectionVariables.set("exchangeId", String(json.data.exchange_request_id));
+          pm.environment.set("exchangeId", String(json.data.exchange_request_id));
+          console.log("exchangeId captured:", json.data.exchange_request_id);
+      }
+    language: text/javascript
+order: 500

@@ -1,0 +1,100 @@
+$kind: http-request
+description: |-
+  ### Get All Notifications
+
+  **Endpoint:** `GET /api/notifications`
+
+  **Access:** 🔐 Authenticated — requires a valid Bearer token
+
+  Returns all notifications (read and unread) for the authenticated user, ordered by most recent first. Supports optional pagination via `page` and `limit` query parameters.
+
+  ---
+
+  ### Query Parameters
+
+  | Parameter | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `page` | integer | ❌ | Page number (default: 1) |
+  | `limit` | integer | ❌ | Items per page (default: 20) |
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Notifications retrieved successfully",
+    "data": {
+      "notifications": [
+        {
+          "notification_id": 1,
+          "user_id": 2,
+          "notification_type": "PURCHASE_REQUEST",
+          "message": "You have a new purchase offer",
+          "is_read": false,
+          "created_at": "2024-01-01T00:00:00.000Z"
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "limit": 20
+    },
+    "timestamp": "2024-01-01T00:00:00.000Z"
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Cause |
+  | --- | --- |
+  | `401 Unauthorized` | Missing or invalid Bearer token |
+url: '{{baseUrl}}/api/notifications?page={{page}}&limit={{limit}}'
+method: GET
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Accept
+    value: application/json
+queryParams:
+  - key: page
+    value: '{{page}}'
+    description: 'Page number (default: 1)'
+  - key: limit
+    value: '{{limit}}'
+    description: 'Items per page (default: 20)'
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response envelope is valid", function () {
+          pm.expect(json).to.have.property("success", true);
+          pm.expect(json).to.have.property("statusCode", 200);
+          pm.expect(json).to.have.property("message", "Notifications retrieved successfully");
+          pm.expect(json).to.have.property("data");
+      });
+
+      pm.test("Data contains notifications array", function () {
+          pm.expect(json.data).to.have.property("notifications").that.is.an("array");
+      });
+
+      // Auto-capture the first notification ID for downstream requests
+      if (json.data && Array.isArray(json.data.notifications) && json.data.notifications.length > 0) {
+          const firstId = json.data.notifications[0].notification_id;
+          pm.collectionVariables.set("notificationId", String(firstId));
+          pm.environment.set("notificationId", String(firstId));
+          console.log("notificationId captured:", firstId);
+      }
+    language: text/javascript
+order: 1000

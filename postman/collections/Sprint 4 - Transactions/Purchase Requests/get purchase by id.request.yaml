@@ -1,0 +1,92 @@
+$kind: http-request
+description: |-
+  ### Get Purchase by ID
+
+  **Endpoint:** `GET /api/purchases/:id`
+
+  **Access:** 🔐 Authenticated — requires a valid Bearer token
+
+  Returns a single purchase request by its numeric ID. The authenticated user must be either the initiator or the target of the request.
+
+  > 💡 `{{purchaseId}}` is automatically captured after running **Get All Purchases**.
+
+  ---
+
+  ### Path Parameters
+
+  | Parameter | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `id` | integer | ✅ | Purchase request ID (positive integer) |
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Purchase request retrieved successfully",
+    "data": {
+      "purchase_request_id": 1,
+      "initiator_user_id": 2,
+      "target_user_id": 3,
+      "product_id": 5,
+      "offered_price": 150.00,
+      "buyer_message": "I'd like to buy this",
+      "request_status": "PENDING",
+      "requested_at": "2024-01-01T00:00:00.000Z"
+    },
+    "timestamp": "2024-01-01T00:00:00.000Z"
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Cause |
+  | --- | --- |
+  | `401 Unauthorized` | Missing or invalid Bearer token |
+  | `404 Not Found` | No purchase request with the given ID |
+url: '{{baseUrl}}/api/purchases/{{purchaseId}}'
+method: GET
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: id
+    value: '{{purchaseId}}'
+    description: 'Purchase request ID (auto-set by Get All Purchases)'
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response envelope is valid", function () {
+          pm.expect(json).to.have.property("success", true);
+          pm.expect(json).to.have.property("statusCode", 200);
+          pm.expect(json).to.have.property("data");
+      });
+
+      pm.test("Purchase has required fields", function () {
+          pm.expect(json.data).to.have.property("purchase_request_id");
+          pm.expect(json.data).to.have.property("request_status");
+          pm.expect(json.data).to.have.property("offered_price");
+      });
+
+      pm.test("Returned ID matches requested ID", function () {
+          const requestedId = pm.collectionVariables.get("purchaseId");
+          pm.expect(String(json.data.purchase_request_id)).to.equal(String(requestedId));
+      });
+    language: text/javascript
+order: 2000

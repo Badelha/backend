@@ -1,0 +1,110 @@
+$kind: http-request
+description: |-
+  ### Get All Transactions
+
+  **Endpoint:** `GET /api/transactions`
+
+  **Access:** 🔐 Authenticated — requires a valid Bearer token
+
+  Returns a combined, paginated list of all exchange and purchase requests for the authenticated user, sorted by most recent first. Each item includes a `type` field (`EXCHANGE` or `PURCHASE`) and a `status` field.
+
+  ---
+
+  ### Query Parameters
+
+  | Parameter | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `page` | integer | ❌ | Page number (default: 1) |
+  | `limit` | integer | ❌ | Items per page (default: 20) |
+  | `status` | string | ❌ | Filter by status: `PENDING`, `ACCEPTED`, `REJECTED`, `COMPLETED`, `CANCELLED` |
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Transactions retrieved successfully",
+    "data": {
+      "transactions": [
+        {
+          "type": "PURCHASE",
+          "status": "PENDING",
+          "created_at": "2024-01-01T00:00:00.000Z"
+        },
+        {
+          "type": "EXCHANGE",
+          "status": "COMPLETED",
+          "created_at": "2023-12-01T00:00:00.000Z"
+        }
+      ],
+      "total": 2,
+      "page": 1,
+      "limit": 20
+    },
+    "timestamp": "2024-01-01T00:00:00.000Z"
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Cause |
+  | --- | --- |
+  | `401 Unauthorized` | Missing or invalid Bearer token |
+url: '{{baseUrl}}/api/transactions?page={{page}}&limit={{limit}}'
+method: GET
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Accept
+    value: application/json
+queryParams:
+  - key: page
+    value: '{{page}}'
+    description: 'Page number (default: 1)'
+  - key: limit
+    value: '{{limit}}'
+    description: 'Items per page (default: 20)'
+  - key: status
+    value: ''
+    description: 'Optional filter: PENDING | ACCEPTED | REJECTED | COMPLETED | CANCELLED'
+    disabled: true
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response envelope is valid", function () {
+          pm.expect(json).to.have.property("success", true);
+          pm.expect(json).to.have.property("statusCode", 200);
+          pm.expect(json).to.have.property("message", "Transactions retrieved successfully");
+          pm.expect(json).to.have.property("data");
+      });
+
+      pm.test("Data contains transactions array and pagination", function () {
+          pm.expect(json.data).to.have.property("transactions").that.is.an("array");
+          pm.expect(json.data).to.have.property("total");
+          pm.expect(json.data).to.have.property("page");
+          pm.expect(json.data).to.have.property("limit");
+      });
+
+      pm.test("Each transaction has type and status", function () {
+          json.data.transactions.forEach(function (tx) {
+              pm.expect(tx).to.have.property("type");
+              pm.expect(["PURCHASE", "EXCHANGE"]).to.include(tx.type);
+              pm.expect(tx).to.have.property("status");
+          });
+      });
+    language: text/javascript
+order: 1000

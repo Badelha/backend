@@ -1,0 +1,1511 @@
+{
+  "info": {
+    "name": "Sprint 4 - Transactions",
+    "description": "## Sprint 4 — Transactions, Purchases, Exchanges & Notifications\n\nThis collection covers all user-facing transactional domains implemented in the Badelha backend. All routes are authenticated via `src/routes/index.js` and the individual route files — not the obsolete mock handlers in `src/app.js`.\n\n### Authentication\nAll requests send `Authorization: Bearer {{accessToken}}`. Obtain a token via the **Sprint 1 – Authentication** collection and store it in the active environment's `accessToken` variable.\n\n### Collection Variables\n| Variable | Default | Purpose |\n| --- | --- | --- |\n| `targetUserId` | `2` | Target user ID for create purchase/exchange requests |\n| `productId` | `1` | Product ID for create purchase requests |\n| `offeredPrice` | `100` | Offered price for create purchase requests |\n| `initiatorProductId` | `1` | Your product ID for create exchange requests |\n| `targetProductId` | `2` | Target product ID for create exchange requests |\n| `purchaseId` | `1` | ID used in single-purchase requests (auto-captured) |\n| `exchangeId` | `1` | ID used in single-exchange requests (auto-captured) |\n| `notificationId` | `1` | ID used in single-notification requests (auto-captured) |\n| `page` | `1` | Default page number for paginated endpoints |\n| `limit` | `20` | Default page size for paginated endpoints |\n\n### Folders\n| Folder | Endpoints |\n| --- | --- |\n| Purchase Requests | POST /api/purchases, GET /api/purchases, GET /api/purchases/:id, PATCH /api/purchases/:id/accept, PATCH /api/purchases/:id/reject, PATCH /api/purchases/:id/complete, PATCH /api/purchases/:id/cancel |\n| Exchange Requests | POST /api/exchanges, GET /api/exchanges, GET /api/exchanges/:id, PATCH /api/exchanges/:id/accept, PATCH /api/exchanges/:id/reject, PATCH /api/exchanges/:id/complete, PATCH /api/exchanges/:id/cancel |\n| Notifications | GET /api/notifications, GET /api/notifications/unread-count, PATCH /api/notifications/read-all, PATCH /api/notifications/:id/read, DELETE /api/notifications/:id |\n| Transactions | GET /api/transactions, GET /api/transactions/stats |",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "targetUserId",
+      "value": "2",
+      "description": "Target user ID for create purchase/exchange requests"
+    },
+    {
+      "key": "productId",
+      "value": "1",
+      "description": "Product ID for create purchase requests"
+    },
+    {
+      "key": "offeredPrice",
+      "value": "100",
+      "description": "Offered price for create purchase requests (must be > 0)"
+    },
+    {
+      "key": "initiatorProductId",
+      "value": "1",
+      "description": "Your product ID for create exchange requests"
+    },
+    {
+      "key": "targetProductId",
+      "value": "2",
+      "description": "Target product ID for create exchange requests"
+    },
+    {
+      "key": "purchaseId",
+      "value": "1",
+      "description": "ID of the purchase request (auto-captured by Create/Get All Purchases)"
+    },
+    {
+      "key": "exchangeId",
+      "value": "1",
+      "description": "ID of the exchange request (auto-captured by Create/Get All Exchanges)"
+    },
+    {
+      "key": "notificationId",
+      "value": "1",
+      "description": "ID of the notification to act on (auto-captured by Get All Notifications)"
+    },
+    {
+      "key": "page",
+      "value": "1",
+      "description": "Default page number for paginated list endpoints"
+    },
+    {
+      "key": "limit",
+      "value": "20",
+      "description": "Default page size for paginated list endpoints"
+    }
+  ],
+  "item": [
+    {
+      "name": "Purchase Requests",
+      "description": "## Purchase Requests\n\nFull lifecycle endpoints for purchase requests. The authenticated user can be either the initiator (buyer) or the target (seller).\n\n| Endpoint | Description |\n| --- | --- |\n| `POST /api/purchases` | Create a new purchase request |\n| `GET /api/purchases` | List all purchase requests (paginated, filterable by status) |\n| `GET /api/purchases/:id` | Get a single purchase request by ID |\n| `PATCH /api/purchases/:id/accept` | Accept a pending purchase request (seller only) |\n| `PATCH /api/purchases/:id/reject` | Reject a pending purchase request (seller only) |\n| `PATCH /api/purchases/:id/complete` | Mark an accepted purchase as completed |\n| `PATCH /api/purchases/:id/cancel` | Cancel a pending purchase request (buyer only) |",
+      "item": [
+        {
+          "name": "create purchase",
+          "description": "### Create Purchase Request\n\n**Endpoint:** `POST /api/purchases`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nCreates a new purchase request for a product listed by another user. The authenticated user becomes the initiator (buyer). The product must be `AVAILABLE` and owned by `targetUserId`. On success the product status is set to `RESERVED` and a notification is sent to the seller.\n\n---\n\n### Request Body\n\n| Field | Type | Required | Description |\n| --- | --- | --- | --- |\n| `targetUserId` | integer | ✅ | ID of the product owner (seller) |\n| `productId` | integer | ✅ | ID of the product to purchase |\n| `offeredPrice` | number | ✅ | Offered price (must be > 0) |\n| `message` | string | ❌ | Optional message to the seller (max 500 chars) |\n\n---\n\n### Success Response — `201 Created`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"message\": \"Purchase request created successfully\",\n  \"data\": {\n    \"purchase_request_id\": 1,\n    \"initiator_user_id\": 2,\n    \"target_user_id\": 3,\n    \"product_id\": 5,\n    \"offered_price\": 150.00,\n    \"buyer_message\": \"I'd like to buy this\",\n    \"request_status\": \"PENDING\",\n    \"requested_at\": \"2024-01-01T00:00:00.000Z\"\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `400 Bad Request` | Validation error or trying to buy own product |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `409 Conflict` | Product not available or pending request already exists |",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetUserId\": {{targetUserId}},\n  \"productId\": {{productId}},\n  \"offeredPrice\": {{offeredPrice}},\n  \"message\": \"I'd like to purchase this item\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/purchases",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "purchases"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response envelope is valid\", function () {",
+                  "    pm.expect(json).to.have.property(\"success\", true);",
+                  "    pm.expect(json).to.have.property(\"statusCode\", 201);",
+                  "    pm.expect(json).to.have.property(\"message\", \"Purchase request created successfully\");",
+                  "    pm.expect(json).to.have.property(\"data\");",
+                  "});",
+                  "",
+                  "pm.test(\"Created purchase has required fields\", function () {",
+                  "    pm.expect(json.data).to.have.property(\"purchase_request_id\");",
+                  "    pm.expect(json.data).to.have.property(\"request_status\", \"PENDING\");",
+                  "    pm.expect(json.data).to.have.property(\"offered_price\");",
+                  "});",
+                  "",
+                  "// Capture the new purchase ID for downstream requests",
+                  "if (json.data && json.data.purchase_request_id) {",
+                  "    pm.collectionVariables.set(\"purchaseId\", String(json.data.purchase_request_id));",
+                  "    pm.environment.set(\"purchaseId\", String(json.data.purchase_request_id));",
+                  "    console.log(\"purchaseId captured:\", json.data.purchase_request_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "get all purchases",
+          "description": "### Get All Purchases\n\n**Endpoint:** `GET /api/purchases`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nReturns a paginated list of purchase requests where the authenticated user is either the initiator (buyer) or the target (seller). Supports optional filtering by status.\n\n---\n\n### Query Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `page` | integer | ❌ | Page number (default: 1, min: 1) |\n| `limit` | integer | ❌ | Items per page (default: 20, max: 100) |\n| `status` | string | ❌ | Filter by status: `PENDING`, `ACCEPTED`, `REJECTED`, `COMPLETED`, `CANCELLED` |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Purchase requests retrieved successfully\",\n  \"data\": {\n    \"requests\": [\n      {\n        \"purchase_request_id\": 1,\n        \"initiator_user_id\": 2,\n        \"target_user_id\": 3,\n        \"product_id\": 5,\n        \"offered_price\": 150.00,\n        \"buyer_message\": \"I'd like to buy this\",\n        \"request_status\": \"PENDING\",\n        \"requested_at\": \"2024-01-01T00:00:00.000Z\"\n      }\n    ],\n    \"total\": 1,\n    \"page\": 1,\n    \"limit\": 20\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/purchases?page={{page}}&limit={{limit}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "purchases"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "{{page}}",
+                  "description": "Page number (default: 1, min: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Items per page (default: 20, max: 100)"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Optional filter: PENDING | ACCEPTED | REJECTED | COMPLETED | CANCELLED",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response envelope is valid\", function () {",
+                  "    pm.expect(json).to.have.property(\"success\", true);",
+                  "    pm.expect(json).to.have.property(\"statusCode\", 200);",
+                  "    pm.expect(json).to.have.property(\"message\");",
+                  "    pm.expect(json).to.have.property(\"data\");",
+                  "});",
+                  "",
+                  "pm.test(\"Data contains requests array and pagination\", function () {",
+                  "    pm.expect(json.data).to.have.property(\"requests\").that.is.an(\"array\");",
+                  "    pm.expect(json.data).to.have.property(\"total\");",
+                  "    pm.expect(json.data).to.have.property(\"page\");",
+                  "    pm.expect(json.data).to.have.property(\"limit\");",
+                  "});",
+                  "",
+                  "// Auto-capture the first purchase ID for downstream requests",
+                  "if (json.data && Array.isArray(json.data.requests) && json.data.requests.length > 0) {",
+                  "    const firstId = json.data.requests[0].purchase_request_id;",
+                  "    pm.collectionVariables.set(\"purchaseId\", String(firstId));",
+                  "    pm.environment.set(\"purchaseId\", String(firstId));",
+                  "    console.log(\"purchaseId captured:\", firstId);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "get purchase by id",
+          "description": "### Get Purchase by ID\n\n**Endpoint:** `GET /api/purchases/:id`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nReturns a single purchase request by its numeric ID. The authenticated user must be either the initiator or the target of the request.\n\n> 💡 `{{purchaseId}}` is automatically captured after running **Get All Purchases**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Purchase request ID (positive integer) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Purchase request retrieved successfully\",\n  \"data\": {\n    \"purchase_request_id\": 1,\n    \"initiator_user_id\": 2,\n    \"target_user_id\": 3,\n    \"product_id\": 5,\n    \"offered_price\": 150.00,\n    \"buyer_message\": \"I'd like to buy this\",\n    \"request_status\": \"PENDING\",\n    \"requested_at\": \"2024-01-01T00:00:00.000Z\"\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `404 Not Found` | No purchase request with the given ID |",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/purchases/{{purchaseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "purchases", "{{purchaseId}}"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{purchaseId}}",
+                  "description": "Purchase request ID (auto-set by Get All Purchases)"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response envelope is valid\", function () {",
+                  "    pm.expect(json).to.have.property(\"success\", true);",
+                  "    pm.expect(json).to.have.property(\"statusCode\", 200);",
+                  "    pm.expect(json).to.have.property(\"data\");",
+                  "});",
+                  "",
+                  "pm.test(\"Purchase has required fields\", function () {",
+                  "    pm.expect(json.data).to.have.property(\"purchase_request_id\");",
+                  "    pm.expect(json.data).to.have.property(\"request_status\");",
+                  "    pm.expect(json.data).to.have.property(\"offered_price\");",
+                  "});",
+                  "",
+                  "pm.test(\"Returned ID matches requested ID\", function () {",
+                  "    const requestedId = pm.collectionVariables.get(\"purchaseId\");",
+                  "    pm.expect(String(json.data.purchase_request_id)).to.equal(String(requestedId));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "accept purchase",
+          "description": "### Accept Purchase Request\n\n**Endpoint:** `PATCH /api/purchases/:id/accept`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nAccepts a pending purchase request. Only the target user (seller) can accept. Transitions the request status from `PENDING` to `ACCEPTED`.\n\n> 💡 `{{purchaseId}}` is automatically captured after running **Create Purchase** or **Get All Purchases**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Purchase request ID (positive integer) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Purchase request accepted successfully\",\n  \"data\": {\n    \"purchase_request_id\": 1,\n    \"request_status\": \"ACCEPTED\"\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `404 Not Found` | Purchase request not found |",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/purchases/{{purchaseId}}/accept",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "purchases", "{{purchaseId}}", "accept"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{purchaseId}}",
+                  "description": "Purchase request ID (auto-set by Create/Get All Purchases)"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response envelope is valid\", function () {",
+                  "    pm.expect(json).to.have.property(\"success\", true);",
+                  "    pm.expect(json).to.have.property(\"statusCode\", 200);",
+                  "    pm.expect(json).to.have.property(\"message\", \"Purchase request accepted successfully\");",
+                  "    pm.expect(json).to.have.property(\"data\");",
+                  "});",
+                  "",
+                  "pm.test(\"Purchase status is ACCEPTED\", function () {",
+                  "    pm.expect(json.data).to.have.property(\"request_status\", \"ACCEPTED\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "reject purchase",
+          "description": "### Reject Purchase Request\n\n**Endpoint:** `PATCH /api/purchases/:id/reject`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nRejects a pending purchase request. Only the target user (seller) can reject. Transitions the request status from `PENDING` to `REJECTED`. An optional rejection reason can be provided.\n\n> 💡 `{{purchaseId}}` is automatically captured after running **Create Purchase** or **Get All Purchases**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Purchase request ID (positive integer) |\n\n### Request Body\n\n| Field | Type | Required | Description |\n| --- | --- | --- | --- |\n| `reason` | string | ❌ | Rejection reason (max 500 chars) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Purchase request rejected successfully\",\n  \"data\": {\n    \"purchase_request_id\": 1,\n    \"request_status\": \"REJECTED\"\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `404 Not Found` | Purchase request not found |",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Item is no longer available\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/purchases/{{purchaseId}}/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "purchases", "{{purchaseId}}", "reject"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{purchaseId}}",
+                  "description": "Purchase request ID (auto-set by Create/Get All Purchases)"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response envelope is valid\", function () {",
+                  "    pm.expect(json).to.have.property(\"success\", true);",
+                  "    pm.expect(json).to.have.property(\"statusCode\", 200);",
+                  "    pm.expect(json).to.have.property(\"message\", \"Purchase request rejected successfully\");",
+                  "    pm.expect(json).to.have.property(\"data\");",
+                  "});",
+                  "",
+                  "pm.test(\"Purchase status is REJECTED\", function () {",
+                  "    pm.expect(json.data).to.have.property(\"request_status\", \"REJECTED\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "complete purchase",
+          "description": "### Complete Purchase Request\n\n**Endpoint:** `PATCH /api/purchases/:id/complete`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nMarks an accepted purchase request as completed. Transitions the request status from `ACCEPTED` to `COMPLETED`.\n\n> 💡 `{{purchaseId}}` is automatically captured after running **Create Purchase** or **Get All Purchases**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Purchase request ID (positive integer) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Purchase completed successfully\",\n  \"data\": {\n    \"purchase_request_id\": 1,\n    \"request_status\": \"COMPLETED\"\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `404 Not Found` | Purchase request not found |",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/purchases/{{purchaseId}}/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "purchases", "{{purchaseId}}", "complete"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{purchaseId}}",
+                  "description": "Purchase request ID (auto-set by Create/Get All Purchases)"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response envelope is valid\", function () {",
+                  "    pm.expect(json).to.have.property(\"success\", true);",
+                  "    pm.expect(json).to.have.property(\"statusCode\", 200);",
+                  "    pm.expect(json).to.have.property(\"message\", \"Purchase completed successfully\");",
+                  "    pm.expect(json).to.have.property(\"data\");",
+                  "});",
+                  "",
+                  "pm.test(\"Purchase status is COMPLETED\", function () {",
+                  "    pm.expect(json.data).to.have.property(\"request_status\", \"COMPLETED\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "cancel purchase",
+          "description": "### Cancel Purchase Request\n\n**Endpoint:** `PATCH /api/purchases/:id/cancel`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nCancels a purchase request. The initiator (buyer) can cancel a `PENDING` request. Transitions the request status to `CANCELLED`.\n\n> 💡 `{{purchaseId}}` is automatically captured after running **Create Purchase** or **Get All Purchases**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Purchase request ID (positive integer) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Purchase cancelled successfully\",\n  \"data\": {\n    \"purchase_request_id\": 1,\n    \"request_status\": \"CANCELLED\"\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `404 Not Found` | Purchase request not found |",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/purchases/{{purchaseId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "purchases", "{{purchaseId}}", "cancel"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{purchaseId}}",
+                  "description": "Purchase request ID (auto-set by Create/Get All Purchases)"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response envelope is valid\", function () {",
+                  "    pm.expect(json).to.have.property(\"success\", true);",
+                  "    pm.expect(json).to.have.property(\"statusCode\", 200);",
+                  "    pm.expect(json).to.have.property(\"message\", \"Purchase cancelled successfully\");",
+                  "    pm.expect(json).to.have.property(\"data\");",
+                  "});",
+                  "",
+                  "pm.test(\"Purchase status is CANCELLED\", function () {",
+                  "    pm.expect(json.data).to.have.property(\"request_status\", \"CANCELLED\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Exchange Requests",
+      "description": "## Exchange Requests\n\nFull lifecycle endpoints for product exchange requests. The authenticated user can be either the initiator or the target.\n\n| Endpoint | Description |\n| --- | --- |\n| `POST /api/exchanges` | Create a new exchange request |\n| `GET /api/exchanges` | List all exchange requests (paginated, filterable by status) |\n| `GET /api/exchanges/:id` | Get a single exchange request by ID |\n| `PATCH /api/exchanges/:id/accept` | Accept a pending exchange request (target only) |\n| `PATCH /api/exchanges/:id/reject` | Reject a pending exchange request (target only) |\n| `PATCH /api/exchanges/:id/complete` | Mark an accepted exchange as completed |\n| `PATCH /api/exchanges/:id/cancel` | Cancel a pending exchange request (initiator only) |",
+      "item": [
+        {
+          "name": "create exchange",
+          "description": "### Create Exchange Request\n\n**Endpoint:** `POST /api/exchanges`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nCreates a new product exchange request. The authenticated user becomes the initiator. Both `initiatorProductId` (your product) and `targetProductId` (the product you want) must be `AVAILABLE`. You cannot exchange with yourself.\n\n---\n\n### Request Body\n\n| Field | Type | Required | Description |\n| --- | --- | --- | --- |\n| `targetUserId` | integer | ✅ | ID of the other user (product owner) |\n| `initiatorProductId` | integer | ✅ | ID of your product to offer |\n| `targetProductId` | integer | ✅ | ID of the product you want |\n| `message` | string | ❌ | Optional message to the other user (max 500 chars) |\n\n---\n\n### Success Response — `201 Created`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"message\": \"Exchange request created successfully\",\n  \"data\": {\n    \"exchange_request_id\": 1,\n    \"initiator_user_id\": 2,\n    \"target_user_id\": 3,\n    \"initiator_product_id\": 4,\n    \"target_product_id\": 5,\n    \"request_status\": \"PENDING\",\n    \"requested_at\": \"2024-01-01T00:00:00.000Z\"\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `400 Bad Request` | Validation error or trying to exchange with yourself |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `409 Conflict` | One of the products is not available or a pending request already exists |",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetUserId\": {{targetUserId}},\n  \"initiatorProductId\": {{initiatorProductId}},\n  \"targetProductId\": {{targetProductId}},\n  \"message\": \"I'd like to exchange my product for yours\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/exchanges",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "exchanges"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response envelope is valid\", function () {",
+                  "    pm.expect(json).to.have.property(\"success\", true);",
+                  "    pm.expect(json).to.have.property(\"statusCode\", 201);",
+                  "    pm.expect(json).to.have.property(\"message\", \"Exchange request created successfully\");",
+                  "    pm.expect(json).to.have.property(\"data\");",
+                  "});",
+                  "",
+                  "pm.test(\"Created exchange has required fields\", function () {",
+                  "    pm.expect(json.data).to.have.property(\"exchange_request_id\");",
+                  "    pm.expect(json.data).to.have.property(\"request_status\", \"PENDING\");",
+                  "    pm.expect(json.data).to.have.property(\"initiator_product_id\");",
+                  "    pm.expect(json.data).to.have.property(\"target_product_id\");",
+                  "});",
+                  "",
+                  "// Capture the new exchange ID for downstream requests",
+                  "if (json.data && json.data.exchange_request_id) {",
+                  "    pm.collectionVariables.set(\"exchangeId\", String(json.data.exchange_request_id));",
+                  "    pm.environment.set(\"exchangeId\", String(json.data.exchange_request_id));",
+                  "    console.log(\"exchangeId captured:\", json.data.exchange_request_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "get all exchanges",
+          "description": "### Get All Exchanges\n\n**Endpoint:** `GET /api/exchanges`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nReturns a paginated list of exchange requests where the authenticated user is either the initiator or the target. Supports optional filtering by status.\n\n---\n\n### Query Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `page` | integer | ❌ | Page number (default: 1, min: 1) |\n| `limit` | integer | ❌ | Items per page (default: 20, max: 100) |\n| `status` | string | ❌ | Filter by status: `PENDING`, `ACCEPTED`, `REJECTED`, `COMPLETED`, `CANCELLED` |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Exchange requests retrieved successfully\",\n  \"data\": {\n    \"requests\": [\n      {\n        \"exchange_request_id\": 1,\n        \"initiator_user_id\": 2,\n        \"target_user_id\": 3,\n        \"initiator_product_id\": 4,\n        \"target_product_id\": 5,\n        \"request_status\": \"PENDING\",\n        \"requested_at\": \"2024-01-01T00:00:00.000Z\"\n      }\n    ],\n    \"total\": 1,\n    \"page\": 1,\n    \"limit\": 20\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/exchanges?page={{page}}&limit={{limit}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "exchanges"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "{{page}}",
+                  "description": "Page number (default: 1, min: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Items per page (default: 20, max: 100)"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Optional filter: PENDING | ACCEPTED | REJECTED | COMPLETED | CANCELLED",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response envelope is valid\", function () {",
+                  "    pm.expect(json).to.have.property(\"success\", true);",
+                  "    pm.expect(json).to.have.property(\"statusCode\", 200);",
+                  "    pm.expect(json).to.have.property(\"message\");",
+                  "    pm.expect(json).to.have.property(\"data\");",
+                  "});",
+                  "",
+                  "pm.test(\"Data contains requests array and pagination\", function () {",
+                  "    pm.expect(json.data).to.have.property(\"requests\").that.is.an(\"array\");",
+                  "    pm.expect(json.data).to.have.property(\"total\");",
+                  "    pm.expect(json.data).to.have.property(\"page\");",
+                  "    pm.expect(json.data).to.have.property(\"limit\");",
+                  "});",
+                  "",
+                  "// Auto-capture the first exchange ID for downstream requests",
+                  "if (json.data && Array.isArray(json.data.requests) && json.data.requests.length > 0) {",
+                  "    const firstId = json.data.requests[0].exchange_request_id;",
+                  "    pm.collectionVariables.set(\"exchangeId\", String(firstId));",
+                  "    pm.environment.set(\"exchangeId\", String(firstId));",
+                  "    console.log(\"exchangeId captured:\", firstId);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "get exchange by id",
+          "description": "### Get Exchange by ID\n\n**Endpoint:** `GET /api/exchanges/:id`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nReturns a single exchange request by its numeric ID. The authenticated user must be either the initiator or the target of the request.\n\n> 💡 `{{exchangeId}}` is automatically captured after running **Get All Exchanges**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Exchange request ID (positive integer) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Exchange request retrieved successfully\",\n  \"data\": {\n    \"exchange_request_id\": 1,\n    \"initiator_user_id\": 2,\n    \"target_user_id\": 3,\n    \"initiator_product_id\": 4,\n    \"target_product_id\": 5,\n    \"request_status\": \"PENDING\",\n    \"requested_at\": \"2024-01-01T00:00:00.000Z\"\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `404 Not Found` | No exchange request with the given ID |",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/exchanges/{{exchangeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "exchanges", "{{exchangeId}}"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{exchangeId}}",
+                  "description": "Exchange request ID (auto-set by Get All Exchanges)"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response envelope is valid\", function () {",
+                  "    pm.expect(json).to.have.property(\"success\", true);",
+                  "    pm.expect(json).to.have.property(\"statusCode\", 200);",
+                  "    pm.expect(json).to.have.property(\"data\");",
+                  "});",
+                  "",
+                  "pm.test(\"Exchange has required fields\", function () {",
+                  "    pm.expect(json.data).to.have.property(\"exchange_request_id\");",
+                  "    pm.expect(json.data).to.have.property(\"request_status\");",
+                  "    pm.expect(json.data).to.have.property(\"initiator_product_id\");",
+                  "    pm.expect(json.data).to.have.property(\"target_product_id\");",
+                  "});",
+                  "",
+                  "pm.test(\"Returned ID matches requested ID\", function () {",
+                  "    const requestedId = pm.collectionVariables.get(\"exchangeId\");",
+                  "    pm.expect(String(json.data.exchange_request_id)).to.equal(String(requestedId));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "accept exchange",
+          "description": "### Accept Exchange Request\n\n**Endpoint:** `PATCH /api/exchanges/:id/accept`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nAccepts a pending exchange request. Only the target user can accept. Transitions the request status from `PENDING` to `ACCEPTED`.\n\n> 💡 `{{exchangeId}}` is automatically captured after running **Create Exchange** or **Get All Exchanges**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Exchange request ID (positive integer) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Exchange request accepted successfully\",\n  \"data\": {\n    \"exchange_request_id\": 1,\n    \"request_status\": \"ACCEPTED\"\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `404 Not Found` | Exchange request not found |",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/exchanges/{{exchangeId}}/accept",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "exchanges", "{{exchangeId}}", "accept"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{exchangeId}}",
+                  "description": "Exchange request ID (auto-set by Create/Get All Exchanges)"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response envelope is valid\", function () {",
+                  "    pm.expect(json).to.have.property(\"success\", true);",
+                  "    pm.expect(json).to.have.property(\"statusCode\", 200);",
+                  "    pm.expect(json).to.have.property(\"message\", \"Exchange request accepted successfully\");",
+                  "    pm.expect(json).to.have.property(\"data\");",
+                  "});",
+                  "",
+                  "pm.test(\"Exchange status is ACCEPTED\", function () {",
+                  "    pm.expect(json.data).to.have.property(\"request_status\", \"ACCEPTED\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "reject exchange",
+          "description": "### Reject Exchange Request\n\n**Endpoint:** `PATCH /api/exchanges/:id/reject`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nRejects a pending exchange request. Only the target user can reject. Transitions the request status from `PENDING` to `REJECTED`. An optional rejection reason can be provided.\n\n> 💡 `{{exchangeId}}` is automatically captured after running **Create Exchange** or **Get All Exchanges**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Exchange request ID (positive integer) |\n\n### Request Body\n\n| Field | Type | Required | Description |\n| --- | --- | --- | --- |\n| `reason` | string | ❌ | Rejection reason (max 500 chars) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Exchange request rejected successfully\",\n  \"data\": {\n    \"exchange_request_id\": 1,\n    \"request_status\": \"REJECTED\"\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `404 Not Found` | Exchange request not found |",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Not interested in this exchange\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/exchanges/{{exchangeId}}/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "exchanges", "{{exchangeId}}", "reject"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{exchangeId}}",
+                  "description": "Exchange request ID (auto-set by Create/Get All Exchanges)"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response envelope is valid\", function () {",
+                  "    pm.expect(json).to.have.property(\"success\", true);",
+                  "    pm.expect(json).to.have.property(\"statusCode\", 200);",
+                  "    pm.expect(json).to.have.property(\"message\", \"Exchange request rejected successfully\");",
+                  "    pm.expect(json).to.have.property(\"data\");",
+                  "});",
+                  "",
+                  "pm.test(\"Exchange status is REJECTED\", function () {",
+                  "    pm.expect(json.data).to.have.property(\"request_status\", \"REJECTED\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "complete exchange",
+          "description": "### Complete Exchange Request\n\n**Endpoint:** `PATCH /api/exchanges/:id/complete`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nMarks an accepted exchange request as completed. Transitions the request status from `ACCEPTED` to `COMPLETED`.\n\n> 💡 `{{exchangeId}}` is automatically captured after running **Create Exchange** or **Get All Exchanges**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Exchange request ID (positive integer) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Exchange completed successfully\",\n  \"data\": {\n    \"exchange_request_id\": 1,\n    \"request_status\": \"COMPLETED\"\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `404 Not Found` | Exchange request not found |",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/exchanges/{{exchangeId}}/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "exchanges", "{{exchangeId}}", "complete"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{exchangeId}}",
+                  "description": "Exchange request ID (auto-set by Create/Get All Exchanges)"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response envelope is valid\", function () {",
+                  "    pm.expect(json).to.have.property(\"success\", true);",
+                  "    pm.expect(json).to.have.property(\"statusCode\", 200);",
+                  "    pm.expect(json).to.have.property(\"message\", \"Exchange completed successfully\");",
+                  "    pm.expect(json).to.have.property(\"data\");",
+                  "});",
+                  "",
+                  "pm.test(\"Exchange status is COMPLETED\", function () {",
+                  "    pm.expect(json.data).to.have.property(\"request_status\", \"COMPLETED\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "cancel exchange",
+          "description": "### Cancel Exchange Request\n\n**Endpoint:** `PATCH /api/exchanges/:id/cancel`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nCancels an exchange request. The initiator can cancel a `PENDING` request. Transitions the request status to `CANCELLED`.\n\n> 💡 `{{exchangeId}}` is automatically captured after running **Create Exchange** or **Get All Exchanges**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Exchange request ID (positive integer) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Exchange cancelled successfully\",\n  \"data\": {\n    \"exchange_request_id\": 1,\n    \"request_status\": \"CANCELLED\"\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `404 Not Found` | Exchange request not found |",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/exchanges/{{exchangeId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "exchanges", "{{exchangeId}}", "cancel"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{exchangeId}}",
+                  "description": "Exchange request ID (auto-set by Create/Get All Exchanges)"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response envelope is valid\", function () {",
+                  "    pm.expect(json).to.have.property(\"success\", true);",
+                  "    pm.expect(json).to.have.property(\"statusCode\", 200);",
+                  "    pm.expect(json).to.have.property(\"message\", \"Exchange cancelled successfully\");",
+                  "    pm.expect(json).to.have.property(\"data\");",
+                  "});",
+                  "",
+                  "pm.test(\"Exchange status is CANCELLED\", function () {",
+                  "    pm.expect(json.data).to.have.property(\"request_status\", \"CANCELLED\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "description": "## Notifications\n\nEndpoints for managing in-app notifications for the authenticated user.\n\n| Endpoint | Description |\n| --- | --- |\n| `GET /api/notifications` | List all notifications (paginated) |\n| `GET /api/notifications/unread-count` | Get the count of unread notifications |\n| `PATCH /api/notifications/read-all` | Mark all notifications as read (bulk) |\n| `PATCH /api/notifications/:id/read` | Mark a single notification as read |\n| `DELETE /api/notifications/:id` | Delete a single notification |",
+      "item": [
+        {
+          "name": "get all notifications",
+          "description": "### Get All Notifications\n\n**Endpoint:** `GET /api/notifications`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nReturns all notifications (read and unread) for the authenticated user, ordered by most recent first. Supports optional pagination via `page` and `limit` query parameters.\n\n---\n\n### Query Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `page` | integer | ❌ | Page number (default: 1) |\n| `limit` | integer | ❌ | Items per page (default: 20) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Notifications retrieved successfully\",\n  \"data\": {\n    \"notifications\": [\n      {\n        \"notification_id\": 1,\n        \"user_id\": 2,\n        \"notification_type\": \"PURCHASE_REQUEST\",\n        \"message\": \"You have a new purchase offer\",\n        \"is_read\": false,\n        \"created_at\": \"2024-01-01T00:00:00.000Z\"\n      }\n    ],\n    \"total\": 1,\n    \"page\": 1,\n    \"limit\": 20\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications?page={{page}}&limit={{limit}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "{{page}}",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Items per page (default: 20)"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response envelope is valid\", function () {",
+                  "    pm.expect(json).to.have.property(\"success\", true);",
+                  "    pm.expect(json).to.have.property(\"statusCode\", 200);",
+                  "    pm.expect(json).to.have.property(\"message\", \"Notifications retrieved successfully\");",
+                  "    pm.expect(json).to.have.property(\"data\");",
+                  "});",
+                  "",
+                  "pm.test(\"Data contains notifications array\", function () {",
+                  "    pm.expect(json.data).to.have.property(\"notifications\").that.is.an(\"array\");",
+                  "});",
+                  "",
+                  "// Auto-capture the first notification ID for downstream requests",
+                  "if (json.data && Array.isArray(json.data.notifications) && json.data.notifications.length > 0) {",
+                  "    const firstId = json.data.notifications[0].notification_id;",
+                  "    pm.collectionVariables.set(\"notificationId\", String(firstId));",
+                  "    pm.environment.set(\"notificationId\", String(firstId));",
+                  "    console.log(\"notificationId captured:\", firstId);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "get unread count",
+          "description": "### Get Unread Notification Count\n\n**Endpoint:** `GET /api/notifications/unread-count`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nReturns the count of unread notifications for the authenticated user. Useful for badge counts and notification indicators in the UI.\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Unread notification count retrieved successfully\",\n  \"data\": {\n    \"count\": 5\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/unread-count",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "unread-count"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response envelope is valid\", function () {",
+                  "    pm.expect(json).to.have.property(\"success\", true);",
+                  "    pm.expect(json).to.have.property(\"statusCode\", 200);",
+                  "    pm.expect(json).to.have.property(\"message\", \"Unread notification count retrieved successfully\");",
+                  "    pm.expect(json).to.have.property(\"data\");",
+                  "});",
+                  "",
+                  "pm.test(\"Data contains a numeric count\", function () {",
+                  "    pm.expect(json.data).to.have.property(\"count\");",
+                  "    pm.expect(json.data.count).to.be.a(\"number\");",
+                  "    pm.expect(json.data.count).to.be.at.least(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "mark all notifications as read",
+          "description": "### Mark All Notifications as Read\n\n**Endpoint:** `PATCH /api/notifications/read-all`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nMarks every notification belonging to the authenticated user as read in a single bulk operation.\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"All notifications marked as read\",\n  \"data\": {\n    \"count\": 5\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/read-all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "read-all"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response envelope is valid\", function () {",
+                  "    pm.expect(json).to.have.property(\"success\", true);",
+                  "    pm.expect(json).to.have.property(\"statusCode\", 200);",
+                  "    pm.expect(json).to.have.property(\"message\", \"All notifications marked as read\");",
+                  "    pm.expect(json).to.have.property(\"data\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "mark notification as read",
+          "description": "### Mark Notification as Read\n\n**Endpoint:** `PATCH /api/notifications/:id/read`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nMarks a single notification as read by its numeric ID. The notification must belong to the authenticated user.\n\n> 💡 `{{notificationId}}` is automatically captured after running **Get All Notifications**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Notification ID (positive integer) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Notification marked as read\",\n  \"data\": {\n    \"notification_id\": 1,\n    \"is_read\": true\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `404 Not Found` | No notification with the given ID |",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/{{notificationId}}/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "{{notificationId}}", "read"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{notificationId}}",
+                  "description": "Notification ID (auto-set by Get All Notifications)"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response envelope is valid\", function () {",
+                  "    pm.expect(json).to.have.property(\"success\", true);",
+                  "    pm.expect(json).to.have.property(\"statusCode\", 200);",
+                  "    pm.expect(json).to.have.property(\"message\", \"Notification marked as read\");",
+                  "    pm.expect(json).to.have.property(\"data\");",
+                  "});",
+                  "",
+                  "pm.test(\"Notification is marked as read\", function () {",
+                  "    pm.expect(json.data).to.have.property(\"is_read\", true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "delete notification",
+          "description": "### Delete Notification\n\n**Endpoint:** `DELETE /api/notifications/:id`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nPermanently deletes a single notification by its numeric ID. The notification must belong to the authenticated user.\n\n> 💡 `{{notificationId}}` is automatically captured after running **Get All Notifications**.\n\n---\n\n### Path Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `id` | integer | ✅ | Notification ID (positive integer) |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Notification deleted successfully\",\n  \"data\": {\n    \"notification_id\": 1\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |\n| `404 Not Found` | No notification with the given ID |",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/{{notificationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "{{notificationId}}"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{notificationId}}",
+                  "description": "Notification ID (auto-set by Get All Notifications)"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response envelope is valid\", function () {",
+                  "    pm.expect(json).to.have.property(\"success\", true);",
+                  "    pm.expect(json).to.have.property(\"statusCode\", 200);",
+                  "    pm.expect(json).to.have.property(\"message\", \"Notification deleted successfully\");",
+                  "    pm.expect(json).to.have.property(\"data\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "description": "## Transactions\n\nEndpoints for retrieving combined transaction records and aggregate statistics across both purchases and exchanges.\n\n| Endpoint | Description |\n| --- | --- |\n| `GET /api/transactions` | List all transactions (combined purchases + exchanges, paginated) |\n| `GET /api/transactions/stats` | Get aggregate statistics broken down by type and status |",
+      "item": [
+        {
+          "name": "get all transactions",
+          "description": "### Get All Transactions\n\n**Endpoint:** `GET /api/transactions`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nReturns a combined, paginated list of all exchange and purchase requests for the authenticated user, sorted by most recent first. Each item includes a `type` field (`EXCHANGE` or `PURCHASE`) and a `status` field.\n\n---\n\n### Query Parameters\n\n| Parameter | Type | Required | Description |\n| --- | --- | --- | --- |\n| `page` | integer | ❌ | Page number (default: 1) |\n| `limit` | integer | ❌ | Items per page (default: 20) |\n| `status` | string | ❌ | Filter by status: `PENDING`, `ACCEPTED`, `REJECTED`, `COMPLETED`, `CANCELLED` |\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Transactions retrieved successfully\",\n  \"data\": {\n    \"transactions\": [\n      {\n        \"type\": \"PURCHASE\",\n        \"status\": \"PENDING\",\n        \"created_at\": \"2024-01-01T00:00:00.000Z\"\n      },\n      {\n        \"type\": \"EXCHANGE\",\n        \"status\": \"COMPLETED\",\n        \"created_at\": \"2023-12-01T00:00:00.000Z\"\n      }\n    ],\n    \"total\": 2,\n    \"page\": 1,\n    \"limit\": 20\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions?page={{page}}&limit={{limit}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "{{page}}",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Items per page (default: 20)"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Optional filter: PENDING | ACCEPTED | REJECTED | COMPLETED | CANCELLED",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response envelope is valid\", function () {",
+                  "    pm.expect(json).to.have.property(\"success\", true);",
+                  "    pm.expect(json).to.have.property(\"statusCode\", 200);",
+                  "    pm.expect(json).to.have.property(\"message\", \"Transactions retrieved successfully\");",
+                  "    pm.expect(json).to.have.property(\"data\");",
+                  "});",
+                  "",
+                  "pm.test(\"Data contains transactions array and pagination\", function () {",
+                  "    pm.expect(json.data).to.have.property(\"transactions\").that.is.an(\"array\");",
+                  "    pm.expect(json.data).to.have.property(\"total\");",
+                  "    pm.expect(json.data).to.have.property(\"page\");",
+                  "    pm.expect(json.data).to.have.property(\"limit\");",
+                  "});",
+                  "",
+                  "pm.test(\"Each transaction has type and status\", function () {",
+                  "    json.data.transactions.forEach(function (tx) {",
+                  "        pm.expect(tx).to.have.property(\"type\");",
+                  "        pm.expect([\"PURCHASE\", \"EXCHANGE\"]).to.include(tx.type);",
+                  "        pm.expect(tx).to.have.property(\"status\");",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "get transaction stats",
+          "description": "### Get Transaction Statistics\n\n**Endpoint:** `GET /api/transactions/stats`\n\n**Access:** 🔐 Authenticated — requires a valid Bearer token\n\nReturns aggregate statistics for the authenticated user's transactions, broken down by type (exchange and purchase) and status. Each type includes a `total` count and a `byStatus` map with counts per status value.\n\n---\n\n### Success Response — `200 OK`\n\n```json\n{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Transaction statistics retrieved successfully\",\n  \"data\": {\n    \"exchange\": {\n      \"total\": 10,\n      \"byStatus\": {\n        \"PENDING\": 3,\n        \"ACCEPTED\": 2,\n        \"COMPLETED\": 4,\n        \"CANCELLED\": 1\n      }\n    },\n    \"purchase\": {\n      \"total\": 8,\n      \"byStatus\": {\n        \"PENDING\": 2,\n        \"ACCEPTED\": 1,\n        \"COMPLETED\": 5\n      }\n    }\n  },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n---\n\n### Error Responses\n\n| Status | Cause |\n| --- | --- |\n| `401 Unauthorized` | Missing or invalid Bearer token |",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions", "stats"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response envelope is valid\", function () {",
+                  "    pm.expect(json).to.have.property(\"success\", true);",
+                  "    pm.expect(json).to.have.property(\"statusCode\", 200);",
+                  "    pm.expect(json).to.have.property(\"message\", \"Transaction statistics retrieved successfully\");",
+                  "    pm.expect(json).to.have.property(\"data\");",
+                  "});",
+                  "",
+                  "pm.test(\"Stats has exchange and purchase breakdown\", function () {",
+                  "    pm.expect(json.data).to.have.property(\"exchange\");",
+                  "    pm.expect(json.data).to.have.property(\"purchase\");",
+                  "    pm.expect(json.data.exchange).to.have.property(\"total\");",
+                  "    pm.expect(json.data.exchange).to.have.property(\"byStatus\");",
+                  "    pm.expect(json.data.purchase).to.have.property(\"total\");",
+                  "    pm.expect(json.data.purchase).to.have.property(\"byStatus\");",
+                  "});",
+                  "",
+                  "pm.test(\"Exchange total is a non-negative number\", function () {",
+                  "    pm.expect(json.data.exchange.total).to.be.a(\"number\").and.to.be.at.least(0);",
+                  "});",
+                  "",
+                  "pm.test(\"Purchase total is a non-negative number\", function () {",
+                  "    pm.expect(json.data.purchase.total).to.be.a(\"number\").and.to.be.at.least(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

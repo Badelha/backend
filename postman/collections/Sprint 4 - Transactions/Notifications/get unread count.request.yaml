@@ -1,0 +1,66 @@
+$kind: http-request
+description: |-
+  ### Get Unread Notification Count
+
+  **Endpoint:** `GET /api/notifications/unread-count`
+
+  **Access:** 🔐 Authenticated — requires a valid Bearer token
+
+  Returns the count of unread notifications for the authenticated user. Useful for badge counts and notification indicators in the UI.
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Unread notification count retrieved successfully",
+    "data": {
+      "count": 5
+    },
+    "timestamp": "2024-01-01T00:00:00.000Z"
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Cause |
+  | --- | --- |
+  | `401 Unauthorized` | Missing or invalid Bearer token |
+url: '{{baseUrl}}/api/notifications/unread-count'
+method: GET
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Accept
+    value: application/json
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response envelope is valid", function () {
+          pm.expect(json).to.have.property("success", true);
+          pm.expect(json).to.have.property("statusCode", 200);
+          pm.expect(json).to.have.property("message", "Unread notification count retrieved successfully");
+          pm.expect(json).to.have.property("data");
+      });
+
+      pm.test("Data contains a numeric count", function () {
+          pm.expect(json.data).to.have.property("count");
+          pm.expect(json.data.count).to.be.a("number");
+          pm.expect(json.data.count).to.be.at.least(0);
+      });
+    language: text/javascript
+order: 2000

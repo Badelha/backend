@@ -1,0 +1,17 @@
+$kind: collection
+name: 'Exchange Requests'
+description: |-
+  ## Exchange Requests
+
+  Full lifecycle endpoints for product exchange requests. The authenticated user can be either the initiator or the target.
+
+  | Endpoint | Description |
+  | --- | --- |
+  | `POST /api/exchanges` | Create a new exchange request |
+  | `GET /api/exchanges` | List all exchange requests (paginated, filterable by status) |
+  | `GET /api/exchanges/:id` | Get a single exchange request by ID |
+  | `PATCH /api/exchanges/:id/accept` | Accept a pending exchange request (target only) |
+  | `PATCH /api/exchanges/:id/reject` | Reject a pending exchange request (target only) |
+  | `PATCH /api/exchanges/:id/complete` | Mark an accepted exchange as completed |
+  | `PATCH /api/exchanges/:id/cancel` | Cancel a pending exchange request (initiator only) |
+order: 2000

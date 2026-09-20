@@ -1,0 +1,104 @@
+$kind: http-request
+description: |-
+  ### Create Purchase Request
+
+  **Endpoint:** `POST /api/purchases`
+
+  **Access:** 🔐 Authenticated — requires a valid Bearer token
+
+  Creates a new purchase request for a product listed by another user. The authenticated user becomes the initiator (buyer). The product must be `AVAILABLE` and owned by `targetUserId`. On success the product status is set to `RESERVED` and a notification is sent to the seller.
+
+  ---
+
+  ### Request Body
+
+  | Field | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `targetUserId` | integer | ✅ | ID of the product owner (seller) |
+  | `productId` | integer | ✅ | ID of the product to purchase |
+  | `offeredPrice` | number | ✅ | Offered price (must be > 0) |
+  | `message` | string | ❌ | Optional message to the seller (max 500 chars) |
+
+  ---
+
+  ### Success Response — `201 Created`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 201,
+    "message": "Purchase request created successfully",
+    "data": {
+      "purchase_request_id": 1,
+      "initiator_user_id": 2,
+      "target_user_id": 3,
+      "product_id": 5,
+      "offered_price": 150.00,
+      "buyer_message": "I'd like to buy this",
+      "request_status": "PENDING",
+      "requested_at": "2024-01-01T00:00:00.000Z"
+    },
+    "timestamp": "2024-01-01T00:00:00.000Z"
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Cause |
+  | --- | --- |
+  | `400 Bad Request` | Validation error or trying to buy own product |
+  | `401 Unauthorized` | Missing or invalid Bearer token |
+  | `409 Conflict` | Product not available or pending request already exists |
+url: '{{baseUrl}}/api/purchases'
+method: POST
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+  - key: Accept
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "targetUserId": {{targetUserId}},
+      "productId": {{productId}},
+      "offeredPrice": {{offeredPrice}},
+      "message": "I'd like to purchase this item"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 201", function () {
+          pm.response.to.have.status(201);
+      });
+
+      pm.test("Response envelope is valid", function () {
+          pm.expect(json).to.have.property("success", true);
+          pm.expect(json).to.have.property("statusCode", 201);
+          pm.expect(json).to.have.property("message", "Purchase request created successfully");
+          pm.expect(json).to.have.property("data");
+      });
+
+      pm.test("Created purchase has required fields", function () {
+          pm.expect(json.data).to.have.property("purchase_request_id");
+          pm.expect(json.data).to.have.property("request_status", "PENDING");
+          pm.expect(json.data).to.have.property("offered_price");
+      });
+
+      // Capture the new purchase ID for downstream requests
+      if (json.data && json.data.purchase_request_id) {
+          pm.collectionVariables.set("purchaseId", String(json.data.purchase_request_id));
+          pm.environment.set("purchaseId", String(json.data.purchase_request_id));
+          console.log("purchaseId captured:", json.data.purchase_request_id);
+      }
+    language: text/javascript
+order: 500

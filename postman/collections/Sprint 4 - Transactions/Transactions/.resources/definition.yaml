@@ -1,0 +1,12 @@
+$kind: collection
+name: 'Transactions'
+description: |-
+  ## Transactions
+
+  Endpoints for retrieving combined transaction records and aggregate statistics across both purchases and exchanges.
+
+  | Endpoint | Description |
+  | --- | --- |
+  | `GET /api/transactions` | List all transactions (combined purchases + exchanges, paginated) |
+  | `GET /api/transactions/stats` | Get aggregate statistics broken down by type and status |
+order: 4000

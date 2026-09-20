@@ -1,0 +1,94 @@
+$kind: http-request
+description: |-
+  ### Reject Purchase Request
+
+  **Endpoint:** `PATCH /api/purchases/:id/reject`
+
+  **Access:** 🔐 Authenticated — requires a valid Bearer token
+
+  Rejects a pending purchase request. Only the target user (seller) can reject. Transitions the request status from `PENDING` to `REJECTED`. An optional rejection reason can be provided.
+
+  > 💡 `{{purchaseId}}` is automatically captured after running **Create Purchase** or **Get All Purchases**.
+
+  ---
+
+  ### Path Parameters
+
+  | Parameter | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `id` | integer | ✅ | Purchase request ID (positive integer) |
+
+  ### Request Body
+
+  | Field | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `reason` | string | ❌ | Rejection reason (max 500 chars) |
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Purchase request rejected successfully",
+    "data": {
+      "purchase_request_id": 1,
+      "request_status": "REJECTED"
+    },
+    "timestamp": "2024-01-01T00:00:00.000Z"
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Cause |
+  | --- | --- |
+  | `401 Unauthorized` | Missing or invalid Bearer token |
+  | `404 Not Found` | Purchase request not found |
+url: '{{baseUrl}}/api/purchases/{{purchaseId}}/reject'
+method: PATCH
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: id
+    value: '{{purchaseId}}'
+    description: 'Purchase request ID (auto-set by Create/Get All Purchases)'
+body:
+  type: json
+  content: |-
+    {
+      "reason": "Item is no longer available"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response envelope is valid", function () {
+          pm.expect(json).to.have.property("success", true);
+          pm.expect(json).to.have.property("statusCode", 200);
+          pm.expect(json).to.have.property("message", "Purchase request rejected successfully");
+          pm.expect(json).to.have.property("data");
+      });
+
+      pm.test("Purchase status is REJECTED", function () {
+          pm.expect(json.data).to.have.property("request_status", "REJECTED");
+      });
+    language: text/javascript
+order: 4000
