@@ -57,13 +57,22 @@ Configure the Render Web Service to deploy the intended production branch with:
 - Pre-deploy command: `npx prisma migrate deploy && npx prisma db seed`
 - Start command: `npm start`
 
-Set `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, the SMTP settings (`EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USER`, `EMAIL_PASS`, `EMAIL_FROM`), and:
+Set `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, the SMTP settings, and:
 
 ```text
 NODE_ENV=production
 CLIENT_URL=https://frontend-git-feature-landin-page-badelha.vercel.app
 CORS_ORIGINS=https://frontend-git-feature-landin-page-badelha.vercel.app,http://localhost:3001
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=465
+EMAIL_USER=your-sending-address@gmail.com
+EMAIL_PASS=your-16-character-google-app-password
+EMAIL_FROM=your-sending-address@gmail.com
 ```
+
+The preferred SMTP variable names are `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USER`, `EMAIL_PASS`, and `EMAIL_FROM`. `EMAIL_HOST`, `EMAIL_USER`, and `EMAIL_PASS` are required; `EMAIL_PORT` defaults to `587`, and `EMAIL_FROM` defaults to the configured sender account. For compatibility with older Render settings, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_PASSWORD`, `MAIL_HOST`, `MAIL_USER`, and `MAIL_PASSWORD` are accepted as aliases. Startup logs identify which alias is in use and report missing variable names, but never log secret values. Prefer migrating Render to the canonical `EMAIL_*` names.
+
+For Gmail, enable 2-Step Verification and use a Google App Password, not the account password; enter the App Password without spaces. Port `465` uses implicit TLS; port `587` uses STARTTLS. `EMAIL_FROM` must be the Gmail account or an authorized sender. Add these values in the Render service's Environment settings and redeploy; never commit real credentials. At startup the service attempts to verify SMTP connectivity, and send/verification failures log safe diagnostic metadata (error code/command/status, not credentials).
 
 `CLIENT_URL` is the canonical frontend origin used for verification and reset links. `CORS_ORIGINS` is a comma-separated exact-origin allowlist. Production refresh cookies are `HttpOnly; Secure; SameSite=None; Path=/api/auth/refresh-token`. Browser third-party-cookie blocking can still prevent refresh between Vercel and Render hostnames; use a same-site custom domain or frontend proxy if browsers block that cookie. Do not set `COOKIE_DOMAIN` for unrelated Vercel/Render domains.
 

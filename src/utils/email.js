@@ -1,38 +1,96 @@
 const nodemailer = require('nodemailer');
-const config = require('../config/env');
+const appConfig = require('../config/env');
+const { resolveEmailConfig, getTransportOptions } = require('../config/email');
 
 let transporter = null;
+const emailConfig = resolveEmailConfig();
 
-// Only create transporter if email credentials exist
-if (config.EMAIL_HOST && config.EMAIL_USER && config.EMAIL_PASS) {
-  transporter = nodemailer.createTransport({
-    host: config.EMAIL_HOST,
-    port: config.EMAIL_PORT,
-    secure: config.EMAIL_PORT === 465,
-    auth: {
-      user: config.EMAIL_USER,
-      pass: config.EMAIL_PASS,
-    },
+if (emailConfig.configured) {
+  transporter = nodemailer.createTransport(getTransportOptions(emailConfig));
+
+  console.info('[email] SMTP transport configured', {
+    host: emailConfig.host,
+    port: emailConfig.port,
+    secure: emailConfig.port === 465,
+    authUserConfigured: true,
+    senderConfigured: Boolean(emailConfig.from),
+    environmentVariables: emailConfig.sources,
+  });
+  for (const { setting, source } of emailConfig.aliases) {
+    console.warn('[email] Deprecated SMTP environment variable alias in use', {
+      setting,
+      source,
+      preferred: setting,
+    });
+  }
+  if (appConfig.NODE_ENV === 'production' && process.env.NODE_TEST_CONTEXT === undefined) {
+    transporter.verify().then(() => {
+      console.info('[email] SMTP connection verified');
+    }).catch((error) => {
+      console.error('[email] SMTP connection verification failed', {
+        name: error.name,
+        code: error.code,
+        command: error.command,
+        responseCode: error.responseCode,
+        message: error.message,
+      });
+    });
+  }
+} else {
+  console.error('[email] SMTP transport is disabled; configuration is incomplete or invalid', {
+    missing: emailConfig.missing,
+    invalid: emailConfig.invalid,
+    aliasesDetected: emailConfig.aliases,
   });
 }
 
 const sendEmail = async (to, subject, html) => {
   if (!transporter) {
-    throw new Error('EMAIL_SERVICE_NOT_CONFIGURED');
+    console.error('[email] Cannot send email because SMTP is not configured', {
+      missing: emailConfig.missing,
+      invalid: emailConfig.invalid,
+      subject,
+    });
+    throw new Error(emailConfig.invalid.length
+      ? 'EMAIL_CONFIGURATION_INVALID'
+      : 'EMAIL_SERVICE_NOT_CONFIGURED');
   }
 
   const mailOptions = {
-    from: config.EMAIL_FROM,
+    from: emailConfig.from,
     to,
     subject,
     html,
   };
 
-  return transporter.sendMail(mailOptions);
+  console.info('[email] Sending email', {
+    host: emailConfig.host,
+    port: emailConfig.port,
+    subject,
+  });
+
+  try {
+    const result = await transporter.sendMail(mailOptions);
+    console.info('[email] Email accepted by SMTP transport', {
+      messageId: result.messageId,
+      acceptedCount: Array.isArray(result.accepted) ? result.accepted.length : 0,
+      rejectedCount: Array.isArray(result.rejected) ? result.rejected.length : 0,
+    });
+    return result;
+  } catch (error) {
+    console.error('[email] SMTP send failed', {
+      name: error.name,
+      code: error.code,
+      command: error.command,
+      responseCode: error.responseCode,
+      message: error.message,
+    });
+    throw new Error('EMAIL_DELIVERY_FAILED', { cause: error });
+  }
 };
 
 const sendVerificationEmail = async (email, token) => {
-  const link = `${config.CLIENT_URL.replace(/\/$/, '')}/verify-email?token=${encodeURIComponent(token)}`;
+  const link = `${appConfig.CLIENT_URL.replace(/\/$/, '')}/verify-email?token=${encodeURIComponent(token)}`;
   const html = `
     <!DOCTYPE html>
     <html>
@@ -79,7 +137,7 @@ const sendVerificationEmail = async (email, token) => {
 };
 
 const sendPasswordResetEmail = async (email, token) => {
-  const link = `${config.CLIENT_URL.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(token)}`;
+  const link = `${appConfig.CLIENT_URL.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(token)}`;
   const html = `
     <!DOCTYPE html>
     <html>

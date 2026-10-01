@@ -24,6 +24,8 @@ class AuthController {
         'PHONE_ALREADY_EXISTS': { status: 409, message: 'Phone number already exists' },
         'INVALID_CITY': { status: 400, message: 'City must be a valid Gaza region' },
         'EMAIL_SERVICE_NOT_CONFIGURED': { status: 503, message: 'Email service is not configured' },
+        'EMAIL_CONFIGURATION_INVALID': { status: 503, message: 'Email service configuration is invalid' },
+        'EMAIL_DELIVERY_FAILED': { status: 503, message: 'Email delivery is temporarily unavailable' },
         'VERIFICATION_TOKEN_NOT_FOUND': { status: 500, message: 'Could not create email verification token' },
       };
       const mapped = errorMap[error.message];
@@ -120,6 +122,8 @@ class AuthController {
       const errorMap = {
         'USER_NOT_FOUND': { status: 404, message: 'User not found' },
         'EMAIL_SERVICE_NOT_CONFIGURED': { status: 503, message: 'Email service is not configured' },
+        'EMAIL_CONFIGURATION_INVALID': { status: 503, message: 'Email service configuration is invalid' },
+        'EMAIL_DELIVERY_FAILED': { status: 503, message: 'Email delivery is temporarily unavailable' },
       };
       const mapped = errorMap[error.message];
       if (mapped) {
