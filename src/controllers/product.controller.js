@@ -11,10 +11,14 @@ class ProductController {
       const productData = {
         ...req.body,
         userId: req.user.user_id,
+        images: (req.files || []).map((file) => `/uploads/products/${encodeURIComponent(file.filename)}`),
       };
       const product = await ProductService.createProduct(productData);
       successResponse(res, 201, product, 'Product created successfully');
     } catch (error) {
+      if (error.code === 'P2003') {
+        return errorResponse(res, 400, 'Category or city does not exist');
+      }
       const errorMap = {
         'CATEGORY_NOT_FOUND': { status: 404, message: 'Category not found' },
         'CITY_NOT_FOUND': { status: 404, message: 'City not found' },
@@ -83,6 +87,9 @@ class ProductController {
       );
       successResponse(res, 200, product, 'Product updated successfully');
     } catch (error) {
+      if (error.code === 'P2003') {
+        return errorResponse(res, 400, 'Category or city does not exist');
+      }
       const errorMap = {
         'PRODUCT_NOT_FOUND': { status: 404, message: 'Product not found' },
         'NOT_OWNER': { status: 403, message: 'You can only update your own products' },
@@ -176,7 +183,7 @@ class ProductController {
       }
 
       // Get the image URL from multer/cloudinary
-      const imageUrl = req.file.path || req.file.filename || req.file.url;
+      const imageUrl = `/uploads/products/${encodeURIComponent(req.file.filename)}`;
 
       const image = await ProductService.addProductImage(productId, userId, imageUrl);
       successResponse(res, 201, image, 'Image added successfully');

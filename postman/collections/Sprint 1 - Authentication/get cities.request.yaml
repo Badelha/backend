@@ -1,0 +1,63 @@
+$kind: http-request
+name: get cities
+description: |-
+  ### Get Cities (Gaza Regions)
+
+  **Endpoint**
+
+  GET /api/cities
+
+  **Description**
+
+  Returns the list of Gaza region names available for the city dropdown in registration and profile update forms. This is a public endpoint — no authentication required.
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Gaza regions retrieved successfully",
+    "data": {
+      "cities": ["Gaza", "Rafah", "Khan Yunis", "Deir al-Balah", "Jabalia", "Beit Lahiya", "Beit Hanoun", "Maghazi", "Nuseirat", "Bureij"]
+    }
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Message | Cause |
+  | --- | --- | --- |
+  | `500 Internal Server Error` | Internal server error | Unexpected server-side failure |
+url: '{{baseUrl}}/api/cities'
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has success flag set to true", function () {
+          pm.expect(json.success).to.be.true;
+      });
+
+      pm.test("Response contains cities array", function () {
+          pm.expect(json.data).to.have.property("cities");
+          pm.expect(json.data.cities).to.be.an("array");
+          pm.expect(json.data.cities.length).to.be.greaterThan(0);
+      });
+
+      pm.test("Cities are strings", function () {
+          json.data.cities.forEach(city => {
+              pm.expect(city).to.be.a("string");
+          });
+      });
+    language: text/javascript
+order: 50

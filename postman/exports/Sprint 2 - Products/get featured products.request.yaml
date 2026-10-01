@@ -1,0 +1,49 @@
+$kind: http-request
+description: |-
+  ### Get Featured Products
+
+  **Endpoint:** `GET /api/products/featured`
+
+  **Access:** 🌐 Public — no authentication required
+
+  ---
+
+  ### Query Parameters
+
+  | Parameter | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `limit` | integer | ❌ | Number of products to return (default: 10) |
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Featured products retrieved successfully",
+    "data": [...]
+  }
+  ```
+url: "{{baseUrl}}/api/products/featured"
+method: GET
+queryParams:
+  - key: limit
+    value: "10"
+    disabled: true
+    description: Number of featured products to return
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has success flag true", function () {
+          pm.expect(json.success).to.be.true;
+      });
+    language: text/javascript
+order: 3000

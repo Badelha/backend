@@ -153,6 +153,21 @@ const getProductByIdValidator = [
     .toInt(),
 ];
 
+const deleteProductValidator = [
+  param('id')
+    .notEmpty().withMessage('Product ID is required')
+    .isInt({ min: 1 }).withMessage('Product ID must be a positive integer')
+    .toInt(),
+];
+
+const searchProductsValidator = [
+  ...getProductsValidator,
+  query('q')
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Search term must be between 2 and 100 characters'),
+];
+
 const addProductImageValidator = [
   param('id')
     .notEmpty().withMessage('Product ID is required')
@@ -177,6 +192,8 @@ module.exports = {
   updateProductValidator,
   getProductsValidator,
   getProductByIdValidator,
+  deleteProductValidator,
+  searchProductsValidator,
   addProductImageValidator,
   deleteProductImageValidator,
 };

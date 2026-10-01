@@ -3,6 +3,8 @@ const router = express.Router();
 const AuthController = require('../controllers/auth.controller');
 const { authenticate } = require('../middlewares/auth.middleware');
 const { validate } = require('../middlewares/validation.middleware');
+const { successResponse, errorResponse } = require('../utils/response');
+const { isAllowedOrigin } = require('../utils/origins');
 const {
   registerValidator,
   loginValidator,
@@ -19,17 +21,17 @@ if (process.env.NODE_ENV === 'development') {
   router.get('/dev/email-verification-token', async (req, res) => {
     try {
       const { email } = req.query;
-      if (!email) return res.status(400).json({ error: 'email query param required' });
+      if (!email) return errorResponse(res, 400, 'email query param required');
       const user = await prisma.user.findUnique({ where: { email } });
-      if (!user) return res.status(404).json({ error: 'User not found' });
+      if (!user) return errorResponse(res, 404, 'User not found');
       const record = await prisma.emailVerification.findFirst({
         where: { user_id: user.user_id, is_used: false },
         orderBy: { created_at: 'desc' },
       });
-      if (!record) return res.status(404).json({ error: 'No unused verification token found' });
-      res.json({ token: record.token });
+      if (!record) return errorResponse(res, 404, 'No unused verification token found');
+      successResponse(res, 200, { token: record.token }, 'Email verification token retrieved');
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      errorResponse(res, 500, err.message);
     }
   });
 
@@ -37,17 +39,17 @@ if (process.env.NODE_ENV === 'development') {
   router.get('/dev/password-reset-token', async (req, res) => {
     try {
       const { email } = req.query;
-      if (!email) return res.status(400).json({ error: 'email query param required' });
+      if (!email) return errorResponse(res, 400, 'email query param required');
       const user = await prisma.user.findUnique({ where: { email } });
-      if (!user) return res.status(404).json({ error: 'User not found' });
+      if (!user) return errorResponse(res, 404, 'User not found');
       const record = await prisma.passwordReset.findFirst({
         where: { user_id: user.user_id, is_used: false },
         orderBy: { created_at: 'desc' },
       });
-      if (!record) return res.status(404).json({ error: 'No unused reset token found' });
-      res.json({ token: record.token });
+      if (!record) return errorResponse(res, 404, 'No unused reset token found');
+      successResponse(res, 200, { token: record.token }, 'Password reset token retrieved');
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      errorResponse(res, 500, err.message);
     }
   });
 }
@@ -65,7 +67,12 @@ router.post('/register', registerValidator, validate, AuthController.register);
 router.post('/login', loginValidator, validate, AuthController.login);
 
 // Refresh access token
-router.post('/refresh-token', AuthController.refreshToken);
+router.post('/refresh-token', (req, res, next) => {
+  if (!isAllowedOrigin(req.get('Origin'))) {
+    return errorResponse(res, 403, 'Refresh requests require an allowed browser origin');
+  }
+  next();
+}, AuthController.refreshToken);
 
 // Verify email
 router.get('/verify-email', AuthController.verifyEmail);

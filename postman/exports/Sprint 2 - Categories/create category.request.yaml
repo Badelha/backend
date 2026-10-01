@@ -1,0 +1,95 @@
+$kind: http-request
+description: |-
+  ### Create Category
+
+  **Endpoint:** `POST /api/categories`
+
+  **Access:** 🔐 Admin only — requires authentication with Admin role
+
+  > Only administrators can create new categories.
+  > Include `Authorization: Bearer {{accessToken}}` with an Admin account.
+
+  ---
+
+  ### Request Body (JSON)
+
+  | Field | Type | Required | Rules |
+  | --- | --- | --- | --- |
+  | `name` | string | ✅ | 2–100 characters |
+  | `description` | string | ❌ | Max 500 characters |
+  | `icon` | string | ❌ | Emoji or icon identifier |
+  | `parentId` | integer | ❌ | Parent category ID (for subcategories) |
+  | `displayOrder` | integer | ❌ | Display order (default: 0) |
+
+  ---
+
+  ### Success Response — `201 Created`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 201,
+    "message": "Category created successfully",
+    "data": {
+      "category_id": 5,
+      "category_name": "Electronics",
+      "description": "Electronic devices and accessories",
+      "icon": "📱",
+      "display_order": 2
+    }
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Message | Cause |
+  | --- | --- | --- |
+  | `400 Bad Request` | Validation error | Missing or invalid fields |
+  | `401 Unauthorized` | Unauthorized | Missing or invalid token |
+  | `403 Forbidden` | Forbidden | Authenticated user is not an Admin |
+  | `409 Conflict` | Category already exists | A category with that name already exists |
+url: "{{baseUrl}}/api/categories"
+method: POST
+body:
+  type: json
+  content: |-
+    {
+      "name": "Electronics",
+      "description": "Electronic devices and accessories",
+      "icon": "📱",
+      "displayOrder": 2
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 201", function () {
+          pm.response.to.have.status(201);
+      });
+
+      pm.test("Response has success flag true", function () {
+          pm.expect(json.success).to.be.true;
+      });
+
+      pm.test("Category has required fields", function () {
+          pm.expect(json.data).to.have.property("category_id");
+          pm.expect(json.data).to.have.property("category_name");
+      });
+
+      pm.test("Response message is correct", function () {
+          pm.expect(json.message).to.eql("Category created successfully");
+      });
+
+      if (pm.response.code === 201 && json.data?.category_id) {
+          pm.environment.set("categoryId", json.data.category_id);
+          console.log("✅ categoryId saved to environment:", json.data.category_id);
+      }
+    language: text/javascript
+order: 3000

@@ -3,16 +3,28 @@ const { successResponse, errorResponse } = require('../utils/response');
 const config = require('../config/env');
 const { pickUserProfileInput } = require('../utils/userProfile');
 
+const refreshCookieOptions = (includeLifetime = true) => ({
+  httpOnly: true,
+  secure: config.NODE_ENV === 'production',
+  sameSite: config.NODE_ENV === 'production' ? 'none' : 'lax',
+  ...(includeLifetime ? { maxAge: 30 * 24 * 60 * 60 * 1000 } : {}),
+  path: '/api/auth/refresh-token',
+  ...(config.COOKIE_DOMAIN ? { domain: config.COOKIE_DOMAIN } : {}),
+});
+
 class AuthController {
   static async register(req, res) {
     try {
       const result = await AuthService.register(pickUserProfileInput(req.body));
+      res.cookie('refreshToken', result.refreshToken, refreshCookieOptions());
       successResponse(res, 201, result, 'User registered successfully');
     } catch (error) {
       const errorMap = {
         'EMAIL_ALREADY_EXISTS': { status: 409, message: 'Email already exists' },
         'PHONE_ALREADY_EXISTS': { status: 409, message: 'Phone number already exists' },
         'INVALID_CITY': { status: 400, message: 'City must be a valid Gaza region' },
+        'EMAIL_SERVICE_NOT_CONFIGURED': { status: 503, message: 'Email service is not configured' },
+        'VERIFICATION_TOKEN_NOT_FOUND': { status: 500, message: 'Could not create email verification token' },
       };
       const mapped = errorMap[error.message];
       if (mapped) {
@@ -27,13 +39,7 @@ class AuthController {
       const { email, password } = req.body;
       const result = await AuthService.login(email, password);
 
-      res.cookie('refreshToken', result.refreshToken, {
-        httpOnly: true,
-        secure: config.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 30 * 24 * 60 * 60 * 1000,
-        path: '/api/auth/refresh-token',
-      });
+      res.cookie('refreshToken', result.refreshToken, refreshCookieOptions());
 
       successResponse(res, 200, result, 'Login successful');
     } catch (error) {
@@ -41,6 +47,7 @@ class AuthController {
         'INVALID_CREDENTIALS': { status: 401, message: 'Invalid email or password' },
         'ACCOUNT_BANNED': { status: 403, message: 'Account is banned' },
         'ACCOUNT_SUSPENDED': { status: 403, message: 'Account is suspended' },
+        'ACCOUNT_NOT_VERIFIED': { status: 403, message: 'Email verification is required' },
       };
       const mapped = errorMap[error.message];
       if (mapped) {
@@ -58,6 +65,7 @@ class AuthController {
       }
 
       const tokens = await AuthService.refreshToken(refreshToken);
+      res.cookie('refreshToken', tokens.refreshToken, refreshCookieOptions());
       successResponse(res, 200, tokens, 'Token refreshed successfully');
     } catch (error) {
       const errorMap = {
@@ -75,9 +83,7 @@ class AuthController {
   static async logout(req, res) {
     try {
       await AuthService.logout(req.user.user_id);
-      res.clearCookie('refreshToken', {
-        path: '/api/auth/refresh-token',
-      });
+      res.clearCookie('refreshToken', refreshCookieOptions(false));
       successResponse(res, 200, null, 'Logout successful');
     } catch (error) {
       errorResponse(res, 500, error.message);
@@ -113,6 +119,7 @@ class AuthController {
     } catch (error) {
       const errorMap = {
         'USER_NOT_FOUND': { status: 404, message: 'User not found' },
+        'EMAIL_SERVICE_NOT_CONFIGURED': { status: 503, message: 'Email service is not configured' },
       };
       const mapped = errorMap[error.message];
       if (mapped) {

@@ -49,6 +49,26 @@ Start the API in production mode:
 npm start
 ```
 
+### Render deployment
+
+Configure the Render Web Service to deploy the intended production branch with:
+
+- Build command: `npm ci && npx prisma generate`
+- Pre-deploy command: `npx prisma migrate deploy && npx prisma db seed`
+- Start command: `npm start`
+
+Set `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, the SMTP settings (`EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USER`, `EMAIL_PASS`, `EMAIL_FROM`), and:
+
+```text
+NODE_ENV=production
+CLIENT_URL=https://frontend-git-feature-landin-page-badelha.vercel.app
+CORS_ORIGINS=https://frontend-git-feature-landin-page-badelha.vercel.app,http://localhost:3001
+```
+
+`CLIENT_URL` is the canonical frontend origin used for verification and reset links. `CORS_ORIGINS` is a comma-separated exact-origin allowlist. Production refresh cookies are `HttpOnly; Secure; SameSite=None; Path=/api/auth/refresh-token`. Browser third-party-cookie blocking can still prevent refresh between Vercel and Render hostnames; use a same-site custom domain or frontend proxy if browsers block that cookie. Do not set `COOKIE_DOMAIN` for unrelated Vercel/Render domains.
+
+Migrations use Prisma's migration history, and the city/role seed skips duplicates. No default product or category demo records are created.
+
 ## Available Scripts
 
 | Command | Purpose |

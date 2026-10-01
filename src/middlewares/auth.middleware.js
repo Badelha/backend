@@ -56,6 +56,9 @@ const authenticate = async (req, res, next) => {
     if (user.account_status === 'SUSPENDED') {
       return errorResponse(res, 403, 'Account is suspended');
     }
+    if (!user.is_verified || user.account_status === 'PENDING_VERIFICATION') {
+      return errorResponse(res, 403, 'Email verification is required');
+    }
 
     req.user = user;
     next();

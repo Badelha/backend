@@ -56,6 +56,7 @@ router.use((req, res) => {
     success: false,
     statusCode: 404,
     message: `API route ${req.method} ${req.originalUrl} not found`,
+    errors: null,
     timestamp: new Date().toISOString(),
   });
 });

@@ -1,5 +1,9 @@
 require('dotenv').config();
 
+const defaultClientUrl = process.env.NODE_ENV === 'production'
+  ? 'https://frontend-git-feature-landin-page-badelha.vercel.app'
+  : 'http://localhost:3001';
+
 module.exports = {
   // Server
   PORT: Number(process.env.PORT) || 3000,
@@ -27,7 +31,12 @@ module.exports = {
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
 
   // Client
-  CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:3001',
+  CLIENT_URL: process.env.CLIENT_URL || defaultClientUrl,
+  CORS_ORIGINS: (process.env.CORS_ORIGINS || process.env.CLIENT_URL || defaultClientUrl)
+    .split(',')
+    .map((origin) => origin.trim().replace(/\/$/, ''))
+    .filter(Boolean),
+  COOKIE_DOMAIN: process.env.COOKIE_DOMAIN || undefined,
 
   // Rate Limiting
   RATE_LIMIT_WINDOW: Number(process.env.RATE_LIMIT_WINDOW) || 15 * 60 * 1000,

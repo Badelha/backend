@@ -5,14 +5,28 @@ const { authenticate } = require('../middlewares/auth.middleware');
 const { isAdmin } = require('../middlewares/role.middleware');
 const { validate } = require('../middlewares/validation.middleware');
 const { upload, handleUploadError } = require('../middlewares/upload.middleware');
+const { errorResponse } = require('../utils/response');
 const {
   createProductValidator,
   updateProductValidator,
   getProductsValidator,
   getProductByIdValidator,
+  deleteProductValidator,
+  searchProductsValidator,
   addProductImageValidator,
   deleteProductImageValidator,
 } = require('../validators/product.validator');
+
+const parseMultipartTags = (req, res, next) => {
+  if (typeof req.body.tags === 'string') {
+    try {
+      req.body.tags = JSON.parse(req.body.tags);
+    } catch {
+      return errorResponse(res, 400, 'Tags must be a valid JSON array');
+    }
+  }
+  next();
+};
 
 // ============================================================
 // PUBLIC ROUTES (No authentication required)
@@ -46,7 +60,7 @@ router.get('/', getProductsValidator, validate, ProductController.getAllProducts
  * @query   {number} minPrice - Minimum price filter
  * @query   {number} maxPrice - Maximum price filter
  */
-router.get('/search', getProductsValidator, validate, ProductController.searchProducts);
+router.get('/search', searchProductsValidator, validate, ProductController.searchProducts);
 
 /**
  * @route   GET /api/products/featured
@@ -113,7 +127,7 @@ router.get('/:id', getProductByIdValidator, validate, ProductController.getProdu
  * @access  Private
  * @note    This route must be BEFORE /:id route
  */
-router.get('/my/listings', authenticate, ProductController.getMyProducts);
+router.get('/my/listings', authenticate, getProductsValidator, validate, ProductController.getMyProducts);
 
 /**
  * @route   POST /api/products
@@ -133,7 +147,19 @@ router.get('/my/listings', authenticate, ProductController.getMyProducts);
 router.post(
   '/',
   authenticate,
+  (req, res, next) => {
+    if (req.is('application/json') || req.is('multipart/form-data')) return next();
+    return res.status(415).json({
+      success: false,
+      statusCode: 415,
+      message: 'Content-Type must be application/json or multipart/form-data',
+      errors: null,
+      timestamp: new Date().toISOString(),
+    });
+  },
   upload.array('images', 5),
+  handleUploadError,
+  parseMultipartTags,
   createProductValidator,
   validate,
   ProductController.createProduct
@@ -167,7 +193,7 @@ router.put(
  * @access  Private (Owner only)
  * @param   {number} id - Product ID
  */
-router.delete('/:id', authenticate, ProductController.deleteProduct);
+router.delete('/:id', authenticate, deleteProductValidator, validate, ProductController.deleteProduct);
 
 // ============================================================
 // PRODUCT IMAGE MANAGEMENT

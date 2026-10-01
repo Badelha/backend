@@ -108,7 +108,15 @@ class UserService {
       select: USER_PUBLIC_SELECT,
     });
 
-    return serializeUser(updatedUser);
+    const averageRating = await prisma.rating.aggregate({
+      where: { rated_user_id: userId, deleted_at: null },
+      _avg: { rating_score: true },
+    });
+
+    return {
+      ...serializeUser(updatedUser),
+      average_rating: averageRating._avg.rating_score || 0,
+    };
   }
 
   /**

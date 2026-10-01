@@ -14,10 +14,16 @@ class ProductService {
       title: data.title,
       description: data.description,
       condition: data.condition,
-      price: data.price ? Number(data.price) : null,
+      price: data.price !== undefined && data.price !== null ? Number(data.price) : null,
       exchange_preference: data.exchangePreference || 'BOTH',
       availability_status: 'AVAILABLE',
       additional_info: data.additionalInfo,
+      ...(data.images?.length
+        ? { images: { create: data.images.map((image_url, image_order) => ({ image_url, image_order })) } }
+        : {}),
+      ...(data.tags?.length
+        ? { product_tags: { create: data.tags.map((tag_id) => ({ tag_id })) } }
+        : {}),
     };
 
     const product = await prisma.product.create({
@@ -33,40 +39,9 @@ class ProductService {
         category: true,
         city: true,
         images: true,
+        product_tags: { include: { tag: true } },
       },
     });
-
-    // Handle tags if provided
-    if (data.tags && data.tags.length > 0) {
-      const tagConnections = data.tags.map((tagId) => ({
-        product_id: product.product_id,
-        tag_id: tagId,
-      }));
-
-      await prisma.productTag.createMany({
-        data: tagConnections,
-      });
-
-      // Fetch product with tags
-      return prisma.product.findUnique({
-        where: { product_id: product.product_id },
-        include: {
-          user: {
-            select: {
-              user_id: true,
-              full_name: true,
-              phone_number: true,
-            },
-          },
-          category: true,
-          city: true,
-          images: true,
-          product_tags: {
-            include: { tag: true },
-          },
-        },
-      });
-    }
 
     return product;
   }
@@ -266,7 +241,7 @@ class ProductService {
     if (data.categoryId) updateData.category_id = Number(data.categoryId);
     if (data.cityId) updateData.city_id = Number(data.cityId);
     if (data.condition) updateData.condition = data.condition;
-    if (data.price !== undefined) updateData.price = data.price ? Number(data.price) : null;
+    if (data.price !== undefined) updateData.price = data.price !== null ? Number(data.price) : null;
     if (data.exchangePreference) updateData.exchange_preference = data.exchangePreference;
     if (data.additionalInfo !== undefined) updateData.additional_info = data.additionalInfo;
 

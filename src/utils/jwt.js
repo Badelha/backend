@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const config = require('../config/env');
 
 const generateTokens = (user) => {
@@ -14,7 +15,7 @@ const generateTokens = (user) => {
   );
 
   const refreshToken = jwt.sign(
-    payload,
+    { ...payload, jti: crypto.randomBytes(16).toString('hex') },
     config.JWT_REFRESH_SECRET,
     { expiresIn: config.JWT_REFRESH_EXPIRES_IN }
   );

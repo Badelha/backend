@@ -1,0 +1,35 @@
+$kind: collection
+description: |-
+  ## Sprint 1 — Authentication
+
+  This folder covers the complete **user authentication lifecycle** for the Badelha platform. All endpoints are prefixed with `/api/auth/` and handle identity management from account creation through session termination.
+
+  ---
+
+  ### Endpoints Overview
+
+  | Request | Method | Endpoint | Description |
+  |---|---|---|---|
+  | Register | `POST` | `/api/auth/register` | Create a new user account. Hashes the password, sets status to `PENDING_VERIFICATION`, and returns a JWT access + refresh token pair. |
+  | Login | `POST` | `/api/auth/login` | Authenticate with email and password. Returns a JWT access token and sets an `HttpOnly` refresh token cookie. |
+  | Logout | `POST` | `/api/auth/logout` | Invalidate the current session and clear the refresh token cookie. |
+  | Refresh Token | `POST` | `/api/auth/refresh-token` | Issue a new JWT access token using the `HttpOnly` refresh token cookie. Rotates the refresh token on every call. |
+  | Verify Email | `POST` | `/api/auth/verify-email` | Confirm a user's email address using the verification token sent after registration. |
+  | Forgot Password | `POST` | `/api/auth/forgot-password` | Initiate the password reset flow by sending a reset link to the user's email. |
+  | Reset Password | `POST` | `/api/auth/reset-password` | Complete the password reset using the token received by email. |
+  | Get Profile | `GET` | `/api/auth/profile` | Retrieve the authenticated user's profile information. Requires a valid JWT access token. |
+
+  ---
+
+  ### Token Strategy
+
+  - **Access Token** — Short-lived JWT returned in the response body. Must be attached to protected requests via the `Authorization: Bearer <token>` header.
+  - **Refresh Token** — Long-lived token (30-day TTL) stored in an `HttpOnly`, `SameSite=Strict` cookie scoped to `/api/auth/refresh-token`. Automatically rotated on each refresh call.
+
+  ---
+
+  ### Notes
+
+  - After-response scripts automatically save `accessToken` and `refreshToken` to the active environment for seamless chaining with downstream requests.
+  - Account status (`ACTIVE`, `PENDING_VERIFICATION`, `BANNED`, `SUSPENDED`) is enforced on login and token refresh.
+  - Password hashes are never exposed in any response.

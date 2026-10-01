@@ -40,6 +40,9 @@ class UserController {
       });
       successResponse(res, 200, user, 'Profile updated successfully');
     } catch (error) {
+      if (error.code === 'P2002') {
+        return errorResponse(res, 409, 'Phone number already exists');
+      }
       const errorMap = {
         'USER_NOT_FOUND': { status: 404, message: 'User not found' },
         'INVALID_CITY': { status: 400, message: 'City must be a valid Gaza region' },

@@ -79,10 +79,15 @@ class AuthService {
       return user;
     });
 
-    // Send verification email OUTSIDE transaction
-    // If email fails, user is still created (they can request resend)
-    sendVerificationEmail(newUser.email, crypto.randomBytes(32).toString('hex'))
-      .catch(console.error);
+    const verification = await prisma.emailVerification.findFirst({
+      where: { user_id: newUser.user_id, is_used: false, deleted_at: null },
+      orderBy: { created_at: 'desc' },
+      select: { token: true },
+    });
+    if (!verification) {
+      throw new Error('VERIFICATION_TOKEN_NOT_FOUND');
+    }
+    await sendVerificationEmail(newUser.email, verification.token);
 
     const tokens = generateTokens(newUser);
 
@@ -129,6 +134,9 @@ class AuthService {
     if (!isPasswordValid) {
       throw new Error('INVALID_CREDENTIALS');
     }
+    if (!user.is_verified || user.account_status === 'PENDING_VERIFICATION') {
+      throw new Error('ACCOUNT_NOT_VERIFIED');
+    }
 
     const tokens = generateTokens(user);
 
@@ -165,7 +173,9 @@ class AuthService {
       },
       select: {
         user_id: true,
+        email: true,
         account_status: true,
+        is_verified: true,
       },
     });
 
@@ -175,6 +185,9 @@ class AuthService {
 
     if (user.account_status === 'BANNED') {
       throw new Error('ACCOUNT_BANNED');
+    }
+    if (user.account_status === 'SUSPENDED' || !user.is_verified) {
+      throw new Error('INVALID_TOKEN');
     }
 
     const tokens = generateTokens(user);
@@ -208,19 +221,24 @@ class AuthService {
       throw new Error('INVALID_TOKEN');
     }
 
-    await prisma.$transaction([
-      prisma.emailVerification.update({
-        where: { id: verification.id },
+    await prisma.$transaction(async (tx) => {
+      const consumed = await tx.emailVerification.updateMany({
+        where: {
+          id: verification.id,
+          is_used: false,
+          expires_at: { gt: new Date() },
+        },
         data: { is_used: true, verified_at: new Date() },
-      }),
-      prisma.user.update({
+      });
+      if (consumed.count !== 1) throw new Error('INVALID_TOKEN');
+      await tx.user.update({
         where: { user_id: verification.user_id },
         data: {
           is_verified: true,
           account_status: 'ACTIVE',
         },
-      }),
-    ]);
+      });
+    });
 
     return { message: 'Email verified successfully' };
   }
@@ -256,8 +274,7 @@ class AuthService {
       },
     });
 
-    // Send email OUTSIDE transaction
-    sendPasswordResetEmail(user.email, token).catch(console.error);
+    await sendPasswordResetEmail(user.email, token);
 
     return { message: 'Password reset email sent' };
   }
@@ -266,31 +283,32 @@ class AuthService {
    * Reset password with token
    */
   static async resetPassword(token, newPassword) {
-    const reset = await prisma.passwordReset.findFirst({
-      where: {
-        token,
-        is_used: false,
-        expires_at: { gt: new Date() },
-        deleted_at: null,
-      },
-    });
-
-    if (!reset) {
-      throw new Error('INVALID_TOKEN');
-    }
-
     const hashedPassword = await hashPassword(newPassword);
+    await prisma.$transaction(async (tx) => {
+      const reset = await tx.passwordReset.findFirst({
+        where: {
+          token,
+          is_used: false,
+          expires_at: { gt: new Date() },
+          deleted_at: null,
+        },
+      });
+      if (!reset) throw new Error('INVALID_TOKEN');
 
-    await prisma.$transaction([
-      prisma.passwordReset.update({
-        where: { id: reset.id },
+      const consumed = await tx.passwordReset.updateMany({
+        where: { id: reset.id, is_used: false, expires_at: { gt: new Date() } },
         data: { is_used: true, reset_at: new Date() },
-      }),
-      prisma.user.update({
+      });
+      if (consumed.count !== 1) throw new Error('INVALID_TOKEN');
+      await tx.user.update({
         where: { user_id: reset.user_id },
-        data: { password_hash: hashedPassword },
-      }),
-    ]);
+        data: {
+          password_hash: hashedPassword,
+          refresh_token: null,
+          refresh_token_expires: null,
+        },
+      });
+    });
 
     return { message: 'Password reset successfully' };
   }

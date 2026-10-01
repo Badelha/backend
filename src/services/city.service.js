@@ -16,6 +16,7 @@ class CityService {
   }
 
   static async listCities() {
+    await CityService.ensureGazaCitiesSeeded();
     const cities = await prisma.city.findMany({
       where: {
         city_name: { in: [...GAZA_CITIES] },

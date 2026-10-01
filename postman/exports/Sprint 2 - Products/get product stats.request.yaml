@@ -1,0 +1,62 @@
+$kind: http-request
+description: |-
+  ### Get Product Statistics
+
+  **Endpoint:** `GET /api/products/stats`
+
+  **Access:** 🔐 Admin only — requires authentication with Admin role
+
+  > Returns aggregate statistics about all products in the system.
+  > Requires an Admin-role account. Use an admin `{{accessToken}}`.
+
+  ---
+
+  ### Success Response — `200 OK`
+
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Product statistics retrieved successfully",
+    "data": {
+      "total": 500,
+      "active": 420,
+      "featured": 15,
+      "byCondition": { "NEW": 50, "LIKE_NEW": 180, ... },
+      "byCategory": [...]
+    }
+  }
+  ```
+
+  ---
+
+  ### Error Responses
+
+  | Status | Message | Cause |
+  | --- | --- | --- |
+  | `401 Unauthorized` | Unauthorized | Missing or invalid token |
+  | `403 Forbidden` | Forbidden | Authenticated user is not an Admin |
+url: "{{baseUrl}}/api/products/stats"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has success flag true", function () {
+          pm.expect(json.success).to.be.true;
+      });
+
+      pm.test("Response contains stats data", function () {
+          pm.expect(json.data).to.be.an("object");
+      });
+    language: text/javascript
+order: 14000

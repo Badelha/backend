@@ -18,9 +18,7 @@ if (config.EMAIL_HOST && config.EMAIL_USER && config.EMAIL_PASS) {
 
 const sendEmail = async (to, subject, html) => {
   if (!transporter) {
-    console.log(`📧 Email would be sent to ${to}: ${subject}`);
-    console.log(`Content: ${html}`);
-    return { message: 'Email service not configured' };
+    throw new Error('EMAIL_SERVICE_NOT_CONFIGURED');
   }
 
   const mailOptions = {
@@ -34,7 +32,7 @@ const sendEmail = async (to, subject, html) => {
 };
 
 const sendVerificationEmail = async (email, token) => {
-  const link = `${config.CLIENT_URL}/verify-email?token=${token}`;
+  const link = `${config.CLIENT_URL.replace(/\/$/, '')}/verify-email?token=${encodeURIComponent(token)}`;
   const html = `
     <!DOCTYPE html>
     <html>
@@ -81,7 +79,7 @@ const sendVerificationEmail = async (email, token) => {
 };
 
 const sendPasswordResetEmail = async (email, token) => {
-  const link = `${config.CLIENT_URL}/reset-password?token=${token}`;
+  const link = `${config.CLIENT_URL.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(token)}`;
   const html = `
     <!DOCTYPE html>
     <html>
