@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const { validationResult } = require('express-validator');
 const {
   GAZA_CITIES,
+  GAZA_CITY_NAMES_ARABIC,
   isAllowedGazaCity,
   normalizeCityName,
 } = require('../src/constants/gazaRegions');
@@ -29,7 +30,15 @@ describe('Gaza city constants', () => {
   test('normalizes aliases to canonical dropdown values', () => {
     assert.equal(normalizeCityName('gaza city'), 'Gaza');
     assert.equal(normalizeCityName('Khan Younis'), 'Khan Yunis');
+    assert.equal(normalizeCityName('غزة'), 'Gaza');
+    assert.equal(isAllowedGazaCity(GAZA_CITY_NAMES_ARABIC.Rafah), true);
     assert.equal(isAllowedGazaCity('Ramallah'), false);
+  });
+
+  test('provides Arabic city names for Gaza seed records', () => {
+    assert.equal(GAZA_CITY_NAMES_ARABIC.Gaza, 'غزة');
+    assert.equal(GAZA_CITY_NAMES_ARABIC['Khan Yunis'], 'خان يونس');
+    assert.equal(GAZA_CITY_NAMES_ARABIC.Rafah, 'رفح');
   });
 });
 
@@ -44,13 +53,13 @@ describe('user serializer', () => {
       refresh_token: 'tok',
       city: {
         city_id: 5,
-        city_name: 'Gaza',
+        city_name: 'غزة',
         region: 'Gaza Strip',
         country: 'Palestine',
       },
     });
 
-    assert.equal(serialized.city, 'Gaza');
+    assert.equal(serialized.city, 'غزة');
     assert.equal(serialized.address, 'Al Remal Street');
     assert.equal(serialized.city_id, 5);
     assert.equal(serialized.password_hash, undefined);

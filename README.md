@@ -76,7 +76,16 @@ For Gmail, enable 2-Step Verification and use a Google App Password, not the acc
 
 `CLIENT_URL` is the canonical frontend origin used for verification and reset links. `CORS_ORIGINS` is a comma-separated exact-origin allowlist. Production refresh cookies are `HttpOnly; Secure; SameSite=None; Path=/api/auth/refresh-token`. Browser third-party-cookie blocking can still prevent refresh between Vercel and Render hostnames; use a same-site custom domain or frontend proxy if browsers block that cookie. Do not set `COOKIE_DOMAIN` for unrelated Vercel/Render domains.
 
-Migrations use Prisma's migration history, and the city/role seed skips duplicates. No default product or category demo records are created.
+The seed creates this local administrator account (the displayed name is `مدير النظام`):
+
+```text
+Email:    admin@badelha.com
+Password: Admin@123456
+```
+
+Seeded demo users use the password `Demo@123456`; for example, `layla.hassan@seed.badelha.com` (`ليلى حسن`), `sara.nasser@seed.badelha.com` (`سارة ناصر`), and `yousef.barakat@seed.badelha.com` (`يوسف بركات`). These credentials are intentionally public test credentials. Never use them on a production database or expose them as production access.
+
+The Prisma schema has no organization, project, message, attachment, application, or standalone audit-log models, and it defines roles but no separate permission records. The seed covers the entities and states that actually exist in the schema; product images are the available attachment-like records and transaction history is the available audit-style history.
 
 ## Available Scripts
 
@@ -87,6 +96,7 @@ Migrations use Prisma's migration history, and the city/role seed skips duplicat
 | `npm run build` | Generates the Prisma client and validates JavaScript syntax |
 | `npm run syntax:check` | Checks all JavaScript files for syntax errors |
 | `npm test` | Runs the Node.js test runner |
+| `npx prisma db seed` | Idempotently seeds local marketplace test fixtures |
 
 ## CI/CD Pipeline
 
