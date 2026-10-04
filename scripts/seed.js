@@ -1,5 +1,6 @@
 const prisma = require('../src/config/prisma');
-const { getGazaCitySeedRows } = require('../src/constants/gazaRegions');
+const { GAZA_CITY_NAMES_ARABIC } = require('../src/constants/gazaRegions');
+const CityService = require('../src/services/city.service');
 const { hashPassword } = require('../src/utils/bcrypt');
 
 const ADMIN_EMAIL = 'admin@badelha.com';
@@ -12,16 +13,6 @@ const EXCHANGE_STATUS_AR = {
   REJECTED: 'مرفوضة',
   COMPLETED: 'مكتملة',
   CANCELLED: 'ملغاة',
-};
-const ARABIC_CITIES = {
-  Gaza: 'مدينة غزة',
-  'Khan Yunis': 'خان يونس',
-  'Deir al-Balah': 'دير البلح',
-  Rafah: 'رفح',
-  Jabalia: 'جباليا',
-  Nuseirat: 'النصيرات',
-  'Al-Bureij': 'البريج',
-  'Beit Lahia': 'بيت لاهيا',
 };
 const PURCHASE_STATUS_AR = {
   PENDING: 'قيد الانتظار',
@@ -57,11 +48,6 @@ async function seedByKey(modelName, idField, where, data) {
 }
 
 async function seedReferenceData() {
-  await prisma.city.createMany({
-    data: getGazaCitySeedRows(),
-    skipDuplicates: true,
-  });
-
   const roleDescriptions = {
     USER: 'عضو في سوق بدّلها المجتمعي.',
     ADMIN: 'مسؤول يدير المنصة ومستخدميها.',
@@ -221,7 +207,7 @@ async function seedUsers(roles, cities) {
       update: {
         full_name: definition.name,
         phone_number: definition.phone,
-        address: `${ARABIC_CITIES[definition.city]}، قطاع غزة، فلسطين`,
+        address: `${GAZA_CITY_NAMES_ARABIC[definition.city]}، قطاع غزة، فلسطين`,
         password_hash: demoPasswordHash,
         account_status: definition.status,
         registration_date: daysAgo(definition.days),
@@ -234,7 +220,7 @@ async function seedUsers(roles, cities) {
       create: {
         full_name: definition.name,
         phone_number: definition.phone,
-        address: `${ARABIC_CITIES[definition.city]}، قطاع غزة، فلسطين`,
+        address: `${GAZA_CITY_NAMES_ARABIC[definition.city]}، قطاع غزة، فلسطين`,
         email: definition.email,
         password_hash: demoPasswordHash,
         account_status: definition.status,
@@ -351,7 +337,7 @@ async function seedProduct({
     featured_until: featuredUntil,
     created_at: daysAgo(days),
     updated_at: daysAgo(Math.max(0, days - 1)),
-    additional_info: `المعاينة والاستلام بالتنسيق المسبق في ${ARABIC_CITIES[city]}، قطاع غزة.`,
+    additional_info: `المعاينة والاستلام بالتنسيق المسبق في ${GAZA_CITY_NAMES_ARABIC[city]}، قطاع غزة.`,
     deleted_at: archived ? daysAgo(2) : null,
   });
 
@@ -774,15 +760,15 @@ async function seedAdvertisements(users, products) {
 
 async function main() {
   const citiesByName = {};
-  await prisma.city.createMany({
-    data: getGazaCitySeedRows(),
-    skipDuplicates: true,
-  });
+  await CityService.ensureGazaCitiesSeeded();
   const cityRows = await prisma.city.findMany({
     where: { region: 'Gaza Strip' },
     select: { city_id: true, city_name: true },
   });
-  for (const city of cityRows) citiesByName[city.city_name] = city;
+  for (const [canonicalName, arabicName] of Object.entries(GAZA_CITY_NAMES_ARABIC)) {
+    const city = cityRows.find((row) => row.city_name === arabicName);
+    if (city) citiesByName[canonicalName] = city;
+  }
 
   const { roles, categories, tags } = await seedReferenceData();
   const users = await seedUsers(roles, citiesByName);
