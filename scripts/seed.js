@@ -264,7 +264,7 @@ async function seedVerificationWorkflows(users, admin) {
       user_id: scenario.user.user_id,
       id_document_path: scenario.path,
     }, {
-      id_document_path: scenario.path, // ✅ FIXED: Added required field here
+      id_document_path: scenario.path,
       verification_status: scenario.status,
       submitted_at: daysAgo(scenario.days),
       verified_at: approved ? daysAgo(scenario.days - 2) : null,
@@ -272,6 +272,10 @@ async function seedVerificationWorkflows(users, admin) {
       rejection_reason: rejected ? 'صورة الهوية غير واضحة؛ يرجى رفع صورة أوضح للتحقق من الحساب.' : null,
       verified_by: approved || rejected ? admin.user_id : null,
       deleted_at: null,
+      // ✅ FIXED: Added the relation connect to satisfy Prisma's required relation
+      user: {
+        connect: { user_id: scenario.user.user_id }
+      }
     });
   }
 
