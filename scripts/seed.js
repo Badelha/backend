@@ -264,6 +264,7 @@ async function seedVerificationWorkflows(users, admin) {
       user_id: scenario.user.user_id,
       id_document_path: scenario.path,
     }, {
+      id_document_path: scenario.path, // ✅ FIXED: Added required field here
       verification_status: scenario.status,
       submitted_at: daysAgo(scenario.days),
       verified_at: approved ? daysAgo(scenario.days - 2) : null,
