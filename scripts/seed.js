@@ -1,7 +1,12 @@
+
 const prisma = require('../src/config/prisma');
 const { GAZA_CITY_NAMES_ARABIC } = require('../src/constants/gazaRegions');
 const CityService = require('../src/services/city.service');
+const { hashPassword } = require('../src/utils/bcrypt');
 
+const ADMIN_EMAIL = 'admin@badelha.com';
+const ADMIN_PASSWORD = 'Admin@123456';
+const DEMO_PASSWORD = 'Demo@123456';
 const DAY = 24 * 60 * 60 * 1000;
 const EXCHANGE_STATUS_AR = {
   PENDING: 'قيد الانتظار',
@@ -35,76 +40,153 @@ async function ensureRecord(modelName, where, data) {
   return model.create({ data });
 }
 
-// ✅ جلب المستخدمين الموجودين بالفعل من قاعدة البيانات
-async function loadExistingUsers() {
-  const emails = {
-    admin: 'admin@badelha.com',
-    layla: 'layla.hassan@seed.badelha.com',
-    omar: 'omar.khalil@seed.badelha.com',
-    sara: 'sara.nasser@seed.badelha.com',
-    yousef: 'yousef.barakat@seed.badelha.com',
-    maha: 'maha.salim@seed.badelha.com',
-    tariq: 'tariq.awad@seed.badelha.com',
-    noor: 'noor.abusamra@seed.badelha.com',
-    adam: 'adam.shurrab@seed.badelha.com',
-    reem: 'reem.eid@seed.badelha.com',
+async function seedReferenceData() {
+  const roleDescriptions = {
+    USER: 'عضو في سوق بدّلها المجتمعي.',
+    ADMIN: 'مسؤول يدير المنصة ومستخدميها.',
+    MODERATOR: 'مشرف يتابع البلاغات ومحتوى السوق.',
   };
 
-  const users = {};
-  for (const [key, email] of Object.entries(emails)) {
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      throw new Error(`User with email ${email} not found. Please ensure users are seeded first.`);
-    }
-    users[key] = user;
+  const roles = {};
+  for (const [role_name, description] of Object.entries(roleDescriptions)) {
+    roles[role_name] = await ensureRecord('role', { role_name }, { role_name, description });
   }
-  return users;
-}
 
-// ✅ جلب التاجات الموجودة بالفعل من قاعدة البيانات
-async function loadExistingTags() {
-  const tagNames = [
-    'بحالة جيدة',
-    'استلام من غزة',
-    'مبادلة',
-    'السعر قابل للتفاوض',
-    'مناسب للطلاب',
-    'تمت تجربته',
-  ];
-  const tags = {};
-  const keys = ['good-condition', 'pickup-gaza', 'exchange', 'negotiable', 'student-friendly', 'tested'];
-  
-  for (let i = 0; i < tagNames.length; i++) {
-    const tag = await prisma.tag.findFirst({ where: { tag_name: tagNames[i] } });
-    if (!tag) {
-      throw new Error(`Tag "${tagNames[i]}" not found. Please ensure tags are seeded first.`);
-    }
-    tags[keys[i]] = tag;
-  }
-  return tags;
-}
-
-// ✅ جلب التصنيفات الموجودة بالفعل من قاعدة البيانات
-async function loadExistingCategories() {
-  const categoryNames = [
-    { key: 'Electronics', names: ['إلكترونيات', 'Electronics'] },
-    { key: 'Mobile Phones', names: ['هواتف محمولة', 'Mobile Phones'] },
-    { key: 'Home & Kitchen', names: ['المنزل والمطبخ', 'Home & Kitchen'] },
-    { key: 'Books', names: ['كتب وقرطاسية', 'Books'] },
-    { key: 'Sports & Outdoors', names: ['رياضة وأنشطة خارجية', 'Sports & Outdoors'] },
-    { key: 'Furniture', names: ['أثاث منزلي', 'Furniture'] },
+  const categoryDefinitions = [
+    { key: 'Electronics', legacyName: 'Electronics', name: 'إلكترونيات', description: 'هواتف وحواسيب وأجهزة منزلية متاحة للتبادل أو البيع في غزة.', icon: 'devices', order: 1 },
+    { key: 'Mobile Phones', legacyName: 'Mobile Phones', name: 'هواتف محمولة', description: 'هواتف ذكية وملحقاتها.', icon: 'phone', order: 2, parent: 'Electronics' },
+    { key: 'Home & Kitchen', legacyName: 'Home & Kitchen', name: 'المنزل والمطبخ', description: 'أدوات منزلية ومستلزمات مطبخ للاستخدام اليومي.', icon: 'home', order: 3 },
+    { key: 'Books', legacyName: 'Books', name: 'كتب وقرطاسية', description: 'كتب دراسية ومواد تعليمية وقرطاسية.', icon: 'book', order: 4 },
+    { key: 'Sports & Outdoors', legacyName: 'Sports & Outdoors', name: 'رياضة وأنشطة خارجية', description: 'معدات رياضية وأدوات للأنشطة الخارجية.', icon: 'sports', order: 5 },
+    { key: 'Furniture', legacyName: 'Furniture', name: 'أثاث منزلي', description: 'أثاث وتجهيزات منزلية.', icon: 'chair', order: 6 },
   ];
   const categories = {};
-  for (const def of categoryNames) {
-    const cat = await prisma.category.findFirst({
-      where: { category_name: { in: def.names } },
+
+  for (const definition of categoryDefinitions) {
+    const parent = definition.parent ? categories[definition.parent] : null;
+    const existing = await prisma.category.findFirst({
+      where: {
+        OR: [
+          { category_name: definition.name },
+          { category_name: definition.legacyName },
+        ],
+      },
     });
-    if (!cat) {
-      throw new Error(`Category "${def.names[0]}" not found. Please ensure categories are seeded first.`);
+    if (existing) {
+      categories[definition.key] = existing;
+    } else {
+      categories[definition.key] = await prisma.category.create({
+        data: {
+          category_name: definition.name,
+          description: definition.description,
+          icon: definition.icon,
+          display_order: definition.order,
+          parent_category_id: parent ? parent.category_id : null,
+        },
+      });
     }
-    categories[def.key] = cat;
   }
-  return categories;
+
+  const tagDefinitions = [
+    { key: 'good-condition', name: 'بحالة جيدة' },
+    { key: 'pickup-gaza', name: 'استلام من غزة' },
+    { key: 'exchange', name: 'مبادلة' },
+    { key: 'negotiable', name: 'السعر قابل للتفاوض' },
+    { key: 'student-friendly', name: 'مناسب للطلاب' },
+    { key: 'tested', name: 'تمت تجربته' },
+  ];
+  const tags = {};
+  for (const definition of tagDefinitions) {
+    const existing = await prisma.tag.findFirst({
+      where: {
+        OR: [
+          { tag_name: definition.name },
+          { tag_name: definition.key },
+        ],
+      },
+    });
+    if (existing) {
+      tags[definition.key] = existing;
+    } else {
+      tags[definition.key] = await prisma.tag.create({
+        data: { tag_name: definition.name },
+      });
+    }
+  }
+
+  return { roles, categories, tags };
+}
+
+async function seedUsers(roles, cities) {
+  const adminPasswordHash = await hashPassword(ADMIN_PASSWORD);
+  const demoPasswordHash = await hashPassword(DEMO_PASSWORD);
+  
+  const admin = await ensureRecord('user', { email: ADMIN_EMAIL }, {
+    full_name: 'مدير النظام',
+    phone_number: '+970599000001',
+    address: 'مدينة غزة، قطاع غزة، فلسطين',
+    email: ADMIN_EMAIL,
+    password_hash: adminPasswordHash,
+    account_status: 'ACTIVE',
+    last_login: daysAgo(0),
+    is_verified: true,
+    is_active: true,
+    city_id: cities.Gaza.city_id,
+  });
+
+  const availableRoles = await prisma.role.findMany({ where: { deleted_at: null } });
+  for (const role of availableRoles) {
+    const existingUserRole = await prisma.userRole.findFirst({
+      where: { user_id: admin.user_id, role_id: role.role_id },
+    });
+    if (!existingUserRole) {
+      await prisma.userRole.create({
+        data: { user_id: admin.user_id, role_id: role.role_id, assigned_at: daysAgo(0) },
+      });
+    }
+  }
+
+  const definitions = [
+    { key: 'layla', name: 'ليلى حسن', email: 'layla.hassan@seed.badelha.com', phone: '+970599100001', city: 'Gaza', status: 'ACTIVE', verified: true, active: true, role: 'USER', days: 180 },
+    { key: 'omar', name: 'عمر خليل', email: 'omar.khalil@seed.badelha.com', phone: '+970599100002', city: 'Khan Yunis', status: 'ACTIVE', verified: true, active: true, role: 'USER', days: 120 },
+    { key: 'sara', name: 'سارة ناصر', email: 'sara.nasser@seed.badelha.com', phone: '+970599100003', city: 'Deir al-Balah', status: 'ACTIVE', verified: true, active: true, role: 'MODERATOR', days: 90 },
+    { key: 'yousef', name: 'يوسف بركات', email: 'yousef.barakat@seed.badelha.com', phone: '+970599100004', city: 'Rafah', status: 'PENDING_VERIFICATION', verified: false, active: true, role: 'USER', days: 2 },
+    { key: 'maha', name: 'مها سليم', email: 'maha.salim@seed.badelha.com', phone: '+970599100005', city: 'Jabalia', status: 'SUSPENDED', verified: true, active: true, role: 'USER', days: 60 },
+    { key: 'tariq', name: 'طارق عوض', email: 'tariq.awad@seed.badelha.com', phone: '+970599100006', city: 'Nuseirat', status: 'BANNED', verified: true, active: false, role: 'USER', days: 240 },
+    { key: 'noor', name: 'نور أبو سمرة', email: 'noor.abusamra@seed.badelha.com', phone: '+970599100007', city: 'Al-Bureij', status: 'ACTIVE', verified: true, active: true, role: 'USER', days: 14 },
+    { key: 'adam', name: 'آدم شُرّاب', email: 'adam.shurrab@seed.badelha.com', phone: '+970599100008', city: 'Beit Lahia', status: 'ACTIVE', verified: true, active: true, role: 'ADMIN', days: 45 },
+    { key: 'reem', name: 'ريم عيد', email: 'reem.eid@seed.badelha.com', phone: '+970599100009', city: 'Rafah', status: 'ACTIVE', verified: true, active: true, role: 'USER', days: 1 },
+  ];
+  const users = { admin };
+
+  for (const definition of definitions) {
+    const user = await ensureRecord('user', { email: definition.email }, {
+      full_name: definition.name,
+      phone_number: definition.phone,
+      address: `${GAZA_CITY_NAMES_ARABIC[definition.city]}، قطاع غزة، فلسطين`,
+      email: definition.email,
+      password_hash: demoPasswordHash,
+      account_status: definition.status,
+      registration_date: daysAgo(definition.days),
+      last_login: definition.verified ? daysAgo(Math.min(definition.days, 3)) : null,
+      is_verified: definition.verified,
+      is_active: definition.active,
+      city_id: cities[definition.city].city_id,
+    });
+    users[definition.key] = user;
+
+    const role = roles[definition.role];
+    const existingUserRole = await prisma.userRole.findFirst({
+      where: { user_id: user.user_id, role_id: role.role_id },
+    });
+    if (!existingUserRole) {
+      await prisma.userRole.create({
+        data: { user_id: user.user_id, role_id: role.role_id },
+      });
+    }
+  }
+
+  return users;
 }
 
 async function seedVerificationWorkflows(users, admin) {
@@ -127,6 +209,7 @@ async function seedVerificationWorkflows(users, admin) {
       verified_at: approved ? daysAgo(scenario.days - 2) : null,
       rejected_at: rejected ? daysAgo(scenario.days - 2) : null,
       rejection_reason: rejected ? 'صورة الهوية غير واضحة؛ يرجى رفع صورة أوضح للتحقق من الحساب.' : null,
+      // ✅ FIXED: Use 'verifier' relation instead of 'verified_by'
       verifier: (approved || rejected) ? { connect: { user_id: admin.user_id } } : undefined,
       user: { connect: { user_id: scenario.user.user_id } },
     });
@@ -616,17 +699,18 @@ async function main() {
     if (city) citiesByName[canonicalName] = city;
   }
 
-  // ✅ جلب البيانات الموجودة مسبقًا بدل إنشائها
-  const users = await loadExistingUsers();
-  const tags = await loadExistingTags();
-  const categories = await loadExistingCategories();
-
+  const { roles, categories, tags } = await seedReferenceData();
+  const users = await seedUsers(roles, citiesByName);
   await seedVerificationWorkflows(users, users.admin);
   const products = await seedProducts(users, categories, citiesByName, tags);
   await seedRequests(users, products, users.admin);
   await seedAdvertisements(users, products);
 
   console.log('اكتمل إعداد البيانات التجريبية. لن يتم تكرار أي سجل موجود مسبقًا.');
+  console.log(`بريد مدير النظام: ${ADMIN_EMAIL}`);
+  console.log(`كلمة مرور مدير النظام: ${ADMIN_PASSWORD}`);
+  console.log(`كلمة مرور الحسابات التجريبية: ${DEMO_PASSWORD}`);
+  console.log('حسابات للتجربة: layla.hassan@seed.badelha.com و yousef.barakat@seed.badelha.com و sara.nasser@seed.badelha.com.');
   console.log('هذه بيانات اختبار عامة للاستخدام المحلي فقط، ولا تستخدمها في بيئة الإنتاج.');
 }
 

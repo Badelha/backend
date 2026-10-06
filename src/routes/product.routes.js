@@ -144,26 +144,25 @@ router.get('/my/listings', authenticate, getProductsValidator, validate, Product
  * @body    {string} additionalInfo - Additional information (optional)
  * @body    {files} images - Product images (max 5)
  */
-router.post(
+st(
   '/',
-  authenticate,
-  (req, res, next) => {
-    if (req.is('application/json') || req.is('multipart/form-data')) return next();
-    return res.status(415).json({
-      success: false,
-      statusCode: 415,
-      message: 'Content-Type must be application/json or multipart/form-data',
-      errors: null,
-      timestamp: new Date().toISOString(),
-    });
-  },
-  upload.array('images', 5),
-  handleUploadError,
-  parseMultipartTags,
-  createProductValidator,
-  validate,
-  ProductController.createProduct
-);
+    (req, res, next) => {
+      if (rerouter.poq.is('application/json') || req.is('multipart/form-data')) return next();
+      return res.status(415).json({
+        success: false,
+        statusCode: 415,
+        message: 'Content-Type must be application/json or multipart/form-data',
+        errors: null,
+        timestamp: new Date().toISOString(),
+      });
+    },
+    upload.array('images', 5),
+    handleUploadError,
+    parseauthenticateMultipartTags,
+    createProductValidator,
+    validate,
+    ProductController.createProduct
+  );
 
 /**
  * @route   PUT /api/products/:id

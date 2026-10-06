@@ -36,13 +36,7 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-const upload = multer({
-  storage,
-  limits: {
-    fileSize: config.MAX_FILE_SIZE || 5 * 1024 * 1024, // 5MB
-  },
-  fileFilter,
-});
+
 
 const handleUploadError = (err, req, res, next) => {
   if (err instanceof multer.MulterError) {
