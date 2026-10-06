@@ -30,20 +30,17 @@ function daysFromNow(days) {
   return new Date(Date.now() + days * DAY);
 }
 
-async function seedByKey(modelName, idField, where, data) {
+/**
+ * Finds an existing record by a unique "where" clause.
+ * If found, returns it immediately without any update.
+ * If not found, creates it.
+ */
+async function ensureRecord(modelName, where, data) {
   const model = prisma[modelName];
-  const existing = await model.findFirst({
-    where,
-    select: { [idField]: true },
-  });
-
+  const existing = await model.findFirst({ where });
   if (existing) {
-    return model.update({
-      where: { [idField]: existing[idField] },
-      data,
-    });
+    return existing;
   }
-
   return model.create({ data });
 }
 
@@ -56,11 +53,7 @@ async function seedReferenceData() {
 
   const roles = {};
   for (const [role_name, description] of Object.entries(roleDescriptions)) {
-    roles[role_name] = await prisma.role.upsert({
-      where: { role_name },
-      update: { description, deleted_at: null },
-      create: { role_name, description },
-    });
+    roles[role_name] = await ensureRecord('role', { role_name }, { role_name, description });
   }
 
   const categoryDefinitions = [
@@ -82,24 +75,20 @@ async function seedReferenceData() {
           { category_name: definition.legacyName },
         ],
       },
-      select: { category_id: true },
     });
-    const data = {
-      category_name: definition.name,
-      description: definition.description,
-      icon: definition.icon,
-      display_order: definition.order,
-      parent_category_id: parent ? parent.category_id : null,
-      deleted_at: null,
-    };
-    categories[definition.key] = existing
-      ? await prisma.category.update({
-        where: { category_id: existing.category_id },
-        data,
-      })
-      : await prisma.category.create({
-        data,
+    if (existing) {
+      categories[definition.key] = existing;
+    } else {
+      categories[definition.key] = await prisma.category.create({
+        data: {
+          category_name: definition.name,
+          description: definition.description,
+          icon: definition.icon,
+          display_order: definition.order,
+          parent_category_id: parent ? parent.category_id : null,
+        },
       });
+    }
   }
 
   const tagDefinitions = [
@@ -119,16 +108,14 @@ async function seedReferenceData() {
           { tag_name: definition.key },
         ],
       },
-      select: { tag_id: true },
     });
-    tags[definition.key] = existing
-      ? await prisma.tag.update({
-        where: { tag_id: existing.tag_id },
-        data: { tag_name: definition.name, deleted_at: null },
-      })
-      : await prisma.tag.create({
+    if (existing) {
+      tags[definition.key] = existing;
+    } else {
+      tags[definition.key] = await prisma.tag.create({
         data: { tag_name: definition.name },
       });
+    }
   }
 
   return { roles, categories, tags };
@@ -137,57 +124,32 @@ async function seedReferenceData() {
 async function seedUsers(roles, cities) {
   const adminPasswordHash = await hashPassword(ADMIN_PASSWORD);
   const demoPasswordHash = await hashPassword(DEMO_PASSWORD);
-  const admin = await prisma.user.upsert({
-    where: { email: ADMIN_EMAIL },
-    update: {
-      full_name: 'مدير النظام',
-      phone_number: '+970599000001',
-      address: 'مدينة غزة، قطاع غزة، فلسطين',
-      password_hash: adminPasswordHash,
-      account_status: 'ACTIVE',
-      total_transactions: 0,
-      last_login: daysAgo(0),
-      is_verified: true,
-      is_active: true,
-      deleted_at: null,
-      city_id: cities.Gaza.city_id,
-    },
-    create: {
-      full_name: 'مدير النظام',
-      phone_number: '+970599000001',
-      address: 'مدينة غزة، قطاع غزة، فلسطين',
-      email: ADMIN_EMAIL,
-      password_hash: adminPasswordHash,
-      account_status: 'ACTIVE',
-      last_login: daysAgo(0),
-      is_verified: true,
-      is_active: true,
-      city_id: cities.Gaza.city_id,
-    },
+  
+  const admin = await ensureRecord('user', { email: ADMIN_EMAIL }, {
+    full_name: 'مدير النظام',
+    phone_number: '+970599000001',
+    address: 'مدينة غزة، قطاع غزة، فلسطين',
+    email: ADMIN_EMAIL,
+    password_hash: adminPasswordHash,
+    account_status: 'ACTIVE',
+    last_login: daysAgo(0),
+    is_verified: true,
+    is_active: true,
+    city_id: cities.Gaza.city_id,
   });
 
-  // The application currently defines these three roles and has no separate permission model.
-  const availableRoles = await prisma.role.findMany({
-    where: { deleted_at: null },
-  });
+  const availableRoles = await prisma.role.findMany({ where: { deleted_at: null } });
   for (const role of availableRoles) {
-    await prisma.userRole.upsert({
-      where: {
-        user_id_role_id: {
-          user_id: admin.user_id,
-          role_id: role.role_id,
-        },
-      },
-      update: { deleted_at: null, assigned_at: daysAgo(0) },
-      create: {
-        user_id: admin.user_id,
-        role_id: role.role_id,
-        assigned_at: daysAgo(0),
-      },
+    const existingUserRole = await prisma.userRole.findFirst({
+      where: { user_id: admin.user_id, role_id: role.role_id },
     });
+    if (!existingUserRole) {
+      await prisma.userRole.create({
+        data: { user_id: admin.user_id, role_id: role.role_id, assigned_at: daysAgo(0) },
+      });
+    }
   }
 
-  // Distinct accounts cover normal, unverified, suspended, banned, and historically deleted users.
   const definitions = [
     { key: 'layla', name: 'ليلى حسن', email: 'layla.hassan@seed.badelha.com', phone: '+970599100001', city: 'Gaza', status: 'ACTIVE', verified: true, active: true, role: 'USER', days: 180 },
     { key: 'omar', name: 'عمر خليل', email: 'omar.khalil@seed.badelha.com', phone: '+970599100002', city: 'Khan Yunis', status: 'ACTIVE', verified: true, active: true, role: 'USER', days: 120 },
@@ -202,49 +164,30 @@ async function seedUsers(roles, cities) {
   const users = { admin };
 
   for (const definition of definitions) {
-    const user = await prisma.user.upsert({
-      where: { email: definition.email },
-      update: {
-        full_name: definition.name,
-        phone_number: definition.phone,
-        address: `${GAZA_CITY_NAMES_ARABIC[definition.city]}، قطاع غزة، فلسطين`,
-        password_hash: demoPasswordHash,
-        account_status: definition.status,
-        registration_date: daysAgo(definition.days),
-        last_login: definition.verified ? daysAgo(Math.min(definition.days, 3)) : null,
-        is_verified: definition.verified,
-        is_active: definition.active,
-        deleted_at: definition.key === 'tariq' ? daysAgo(30) : null,
-        city_id: cities[definition.city].city_id,
-      },
-      create: {
-        full_name: definition.name,
-        phone_number: definition.phone,
-        address: `${GAZA_CITY_NAMES_ARABIC[definition.city]}، قطاع غزة، فلسطين`,
-        email: definition.email,
-        password_hash: demoPasswordHash,
-        account_status: definition.status,
-        registration_date: daysAgo(definition.days),
-        last_login: definition.verified ? daysAgo(Math.min(definition.days, 3)) : null,
-        is_verified: definition.verified,
-        is_active: definition.active,
-        deleted_at: definition.key === 'tariq' ? daysAgo(30) : null,
-        city_id: cities[definition.city].city_id,
-      },
+    const user = await ensureRecord('user', { email: definition.email }, {
+      full_name: definition.name,
+      phone_number: definition.phone,
+      address: `${GAZA_CITY_NAMES_ARABIC[definition.city]}، قطاع غزة، فلسطين`,
+      email: definition.email,
+      password_hash: demoPasswordHash,
+      account_status: definition.status,
+      registration_date: daysAgo(definition.days),
+      last_login: definition.verified ? daysAgo(Math.min(definition.days, 3)) : null,
+      is_verified: definition.verified,
+      is_active: definition.active,
+      city_id: cities[definition.city].city_id,
     });
     users[definition.key] = user;
 
     const role = roles[definition.role];
-    await prisma.userRole.upsert({
-      where: {
-        user_id_role_id: {
-          user_id: user.user_id,
-          role_id: role.role_id,
-        },
-      },
-      update: { deleted_at: null },
-      create: { user_id: user.user_id, role_id: role.role_id },
+    const existingUserRole = await prisma.userRole.findFirst({
+      where: { user_id: user.user_id, role_id: role.role_id },
     });
+    if (!existingUserRole) {
+      await prisma.userRole.create({
+        data: { user_id: user.user_id, role_id: role.role_id },
+      });
+    }
   }
 
   return users;
@@ -260,7 +203,7 @@ async function seedVerificationWorkflows(users, admin) {
   for (const scenario of verificationScenarios) {
     const approved = scenario.status === 'APPROVED';
     const rejected = scenario.status === 'REJECTED';
-    await seedByKey('userVerification', 'verification_id', {
+    await ensureRecord('userVerification', {
       user_id: scenario.user.user_id,
       id_document_path: scenario.path,
     }, {
@@ -271,11 +214,7 @@ async function seedVerificationWorkflows(users, admin) {
       rejected_at: rejected ? daysAgo(scenario.days - 2) : null,
       rejection_reason: rejected ? 'صورة الهوية غير واضحة؛ يرجى رفع صورة أوضح للتحقق من الحساب.' : null,
       verified_by: approved || rejected ? admin.user_id : null,
-      deleted_at: null,
-      // ✅ FIXED: Added the relation connect to satisfy Prisma's required relation
-      user: {
-        connect: { user_id: scenario.user.user_id }
-      }
+      user: { connect: { user_id: scenario.user.user_id } },
     });
   }
 
@@ -286,7 +225,7 @@ async function seedVerificationWorkflows(users, admin) {
   ];
 
   for (const scenario of emailScenarios) {
-    await seedByKey('emailVerification', 'id', {
+    await ensureRecord('emailVerification', {
       user_id: scenario.user.user_id,
       token: scenario.token,
     }, {
@@ -294,18 +233,16 @@ async function seedVerificationWorkflows(users, admin) {
       verified_at: scenario.verified,
       is_used: scenario.used,
       created_at: daysAgo(scenario.days),
-      deleted_at: null,
     });
   }
 
-  // Includes an outstanding request, an expired link, and a completed password reset.
   const resetScenarios = [
     { user: users.reem, token: 'seed-reset-open-token', expires: daysFromNow(1), used: false, reset: null, days: 0 },
     { user: users.maha, token: 'seed-reset-expired-token', expires: daysAgo(3), used: false, reset: null, days: 5 },
     { user: users.layla, token: 'seed-reset-completed-token', expires: daysAgo(30), used: true, reset: daysAgo(31), days: 32 },
   ];
   for (const scenario of resetScenarios) {
-    await seedByKey('passwordReset', 'id', {
+    await ensureRecord('passwordReset', {
       user_id: scenario.user.user_id,
       token: scenario.token,
     }, {
@@ -313,7 +250,6 @@ async function seedVerificationWorkflows(users, admin) {
       is_used: scenario.used,
       requested_at: daysAgo(scenario.days),
       reset_at: scenario.reset,
-      deleted_at: null,
     });
   }
 }
@@ -323,7 +259,8 @@ async function seedProduct({
   status, price, days, views = 0, featured = false, featuredUntil = null,
   archived = false, tags = [], images = [],
 }, categories, cities, tagRecords) {
-  const product = await seedByKey('product', 'product_id', {
+  
+  const product = await ensureRecord('product', {
     user_id: owner.user_id,
     OR: [
       { additional_info: { contains: key } },
@@ -347,30 +284,30 @@ async function seedProduct({
   });
 
   for (let index = 0; index < images.length; index += 1) {
-    await seedByKey('image', 'image_id', {
+    await ensureRecord('image', {
       product_id: product.product_id,
       image_order: index,
     }, {
       image_url: `https://images.example.test/badelha/${images[index]}.jpg`,
       uploaded_at: daysAgo(Math.max(0, days - 1)),
-      deleted_at: null,
     });
   }
 
   for (const tagName of tags) {
-    await prisma.productTag.upsert({
+    const existingProductTag = await prisma.productTag.findFirst({
       where: {
-        product_id_tag_id: {
-          product_id: product.product_id,
-          tag_id: tagRecords[tagName].tag_id,
-        },
-      },
-      update: {},
-      create: {
         product_id: product.product_id,
         tag_id: tagRecords[tagName].tag_id,
       },
     });
+    if (!existingProductTag) {
+      await prisma.productTag.create({
+        data: {
+          product_id: product.product_id,
+          tag_id: tagRecords[tagName].tag_id,
+        },
+      });
+    }
   }
 
   return product;
@@ -394,7 +331,6 @@ async function seedProducts(users, categories, cities, tags) {
     products[definition.key] = await seedProduct(definition, categories, cities, tags);
   }
 
-  // Separate product pairs make each exchange status independently discoverable and consistent.
   const exchangeStatuses = ['PENDING', 'ACCEPTED', 'REJECTED', 'COMPLETED', 'CANCELLED'];
   const userPairs = [
     [users.layla, users.omar], [users.omar, users.sara], [users.sara, users.noor],
@@ -436,7 +372,6 @@ async function seedProducts(users, categories, cities, tags) {
     }, categories, cities, tags);
   }
 
-  // Purchases have their own listings so they can be tested without changing exchange fixtures.
   for (let index = 0; index < exchangeStatuses.length; index += 1) {
     const status = exchangeStatuses[index];
     const key = status.toLowerCase();
@@ -458,7 +393,6 @@ async function seedProducts(users, categories, cities, tags) {
     }, categories, cities, tags);
   }
 
-  // Multiple mature listings exercise pagination and high-view sorting.
   for (let index = 0; index < 12; index += 1) {
     const owner = [users.layla, users.omar, users.sara, users.noor][index % 4];
     const title = `إعلان مجتمعي ${String(index + 1).padStart(2, '0')} - مستلزمات منزلية`;
@@ -510,12 +444,12 @@ async function seedRequests(users, products, admin) {
       completed_at: completedAt,
       rejected_at: rejectedAt,
       cancelled_at: cancelledAt,
-      deleted_at: null,
     };
 
     const exchangeNotes = `طلب مبادلة تجريبي بحالة ${EXCHANGE_STATUS_AR[status]}.`;
     const purchaseNotes = `طلب شراء تجريبي بحالة ${PURCHASE_STATUS_AR[status]}.`;
-    const exchange = await seedByKey('exchangeRequest', 'exchange_request_id', {
+    
+    const exchange = await ensureRecord('exchangeRequest', {
       OR: [
         { notes: `seed:exchange:${lower}` },
         { notes: exchangeNotes },
@@ -532,7 +466,7 @@ async function seedRequests(users, products, admin) {
     });
     exchangeIds[status] = exchange.exchange_request_id;
 
-    const purchase = await seedByKey('purchaseRequest', 'purchase_request_id', {
+    const purchase = await ensureRecord('purchaseRequest', {
       OR: [
         { notes: `seed:purchase:${lower}` },
         { notes: purchaseNotes },
@@ -599,14 +533,11 @@ async function seedRequests(users, products, admin) {
 
   for (const record of historyRecords) {
     const { key, ...data } = record;
-    await seedByKey('transactionHistory', 'history_id', {
+    await ensureRecord('transactionHistory', {
       transaction_type: record.transaction_type,
       entity_id: record.entity_id,
       OR: [{ notes: key }, { notes: record.notes }],
-    }, {
-      ...data,
-      deleted_at: null,
-    });
+    }, data);
   }
 
   await seedRatings(users, exchangeIds, purchaseIds);
@@ -624,30 +555,27 @@ async function seedRatings(users, exchangeIds, purchaseIds) {
     { type: 'PURCHASE', entity: purchaseIds.COMPLETED, rater: users.adam, rated: users.reem, score: 1, review: 'تقييم منخفض لتمثيل حالة تحتاج إلى مراجعة.' },
   ];
   for (const rating of scenarios) {
-    await prisma.rating.upsert({
+    const existing = await prisma.rating.findFirst({
       where: {
-        rated_entity_type_entity_id_rater_user_id_rated_user_id: {
-          rated_entity_type: rating.type,
-          entity_id: rating.entity,
-          rater_user_id: rating.rater.user_id,
-          rated_user_id: rating.rated.user_id,
-        },
-      },
-      update: {
-        rating_score: rating.score,
-        review: rating.review,
-        deleted_at: null,
-      },
-      create: {
         rated_entity_type: rating.type,
         entity_id: rating.entity,
         rater_user_id: rating.rater.user_id,
         rated_user_id: rating.rated.user_id,
-        rating_score: rating.score,
-        review: rating.review,
-        created_at: daysAgo(3),
       },
     });
+    if (!existing) {
+      await prisma.rating.create({
+        data: {
+          rated_entity_type: rating.type,
+          entity_id: rating.entity,
+          rater_user_id: rating.rater.user_id,
+          rated_user_id: rating.rated.user_id,
+          rating_score: rating.score,
+          review: rating.review,
+          created_at: daysAgo(3),
+        },
+      });
+    }
   }
 }
 
@@ -675,7 +603,8 @@ async function seedReports(users, products, admin) {
             : scenario.type === 'INCORRECT_REQUEST'
               ? 'تفاصيل الطلب أو السعر المقترح غير دقيقة.'
               : 'أرجو مراجعة هذه الحالة والتواصل مع الأطراف عند الحاجة.';
-    const report = await seedByKey('report', 'report_id', {
+    
+    const report = await ensureRecord('report', {
       reporter_user_id: scenario.reporter.user_id,
       reported_user_id: scenario.reported.user_id,
       report_type: scenario.type,
@@ -694,7 +623,6 @@ async function seedReports(users, products, admin) {
       created_at: daysAgo(scenario.days),
       resolved_at: resolved ? daysAgo(Math.max(0, scenario.days - 1)) : null,
       resolved_by: resolved ? admin.user_id : null,
-      deleted_at: null,
     });
     reportIds[scenario.key] = report.report_id;
   }
@@ -716,7 +644,7 @@ async function seedNotifications(users, products, exchangeIds, purchaseIds, repo
   for (const scenario of scenarios) {
     const createdAt = daysAgo(scenario.days);
     const message = scenario.message;
-    await seedByKey('notification', 'notification_id', {
+    await ensureRecord('notification', {
       user_id: scenario.user.user_id,
       notification_type: scenario.type,
       OR: [
@@ -749,7 +677,7 @@ async function seedAdvertisements(users, products) {
 
   for (let index = 0; index < scenarios.length; index += 1) {
     const scenario = scenarios[index];
-    await seedByKey('ad', 'ad_id', {
+    await ensureRecord('ad', {
       product_id: scenario.product.product_id,
       ad_position: scenario.position,
     }, {
@@ -758,7 +686,6 @@ async function seedAdvertisements(users, products) {
       display_order: index + 1,
       is_active: scenario.active,
       created_at: daysAgo(index * 5),
-      deleted_at: null,
     });
   }
 }
@@ -782,7 +709,7 @@ async function main() {
   await seedRequests(users, products, users.admin);
   await seedAdvertisements(users, products);
 
-  console.log('اكتمل إعداد البيانات التجريبية. يمكن تشغيل السيدر مجددًا دون تكرار السجلات.');
+  console.log('اكتمل إعداد البيانات التجريبية. لن يتم تكرار أي سجل موجود مسبقًا.');
   console.log(`بريد مدير النظام: ${ADMIN_EMAIL}`);
   console.log(`كلمة مرور مدير النظام: ${ADMIN_PASSWORD}`);
   console.log(`كلمة مرور الحسابات التجريبية: ${DEMO_PASSWORD}`);
